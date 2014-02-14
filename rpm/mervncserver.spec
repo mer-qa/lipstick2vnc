@@ -53,4 +53,4 @@ systemctl daemon-reload
 %{_bindir}/%{name}
 /%{_lib}/systemd/system/vnc.socket
 /%{_lib}/systemd/system/vnc.service
-/%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
+/%{_lib}/systemd/system/multi-user.target.wants/vnc.service
