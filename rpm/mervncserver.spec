@@ -34,7 +34,9 @@ rm -rf %{buildroot}
 
 # systemd integration
 mkdir -p %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/
-ln -s ../vnc.socket %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
+# does not work
+#ln -s ../vnc.socket %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
+ln -s ../vnc.service %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/vnc.service
 
 %post
 systemctl daemon-reload
