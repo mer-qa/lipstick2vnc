@@ -9,6 +9,7 @@ Source0:        %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(libvncserver)
 BuildRequires:  pkgconfig(libsystemd-daemon)
+BuildRequires:  libjpeg-turbo-devel
 
 %description
 A VNC server for Mer QA
