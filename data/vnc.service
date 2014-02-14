@@ -1,0 +1,10 @@
+[Unit]
+Description=VNC Per-Connection Server
+After=syslog.target
+
+[Service]
+ExecStart=-/usr/bin/mervncserver
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=network.target
