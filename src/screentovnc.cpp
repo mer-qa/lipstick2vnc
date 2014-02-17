@@ -105,8 +105,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     IN;
     // TODO: make that configurable?
     exitWhenLastClientGone = false;
+    isEmptyMouse = false;
     m_fbfd = -1;
     lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
+    lastPointerMove = lastPointerEvent;
 
     // Unix Signal Handling set up
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, unixHupSignalFd))
@@ -367,6 +369,12 @@ void ScreenToVnc::grapFrame()
             // TODO: somewhere we are off by one?
             rfbMarkRectAsModified(m_server, min_x, min_y, max_x+1, max_y+1);
         }
+
+        // TODO: make the 500ms configurable?!
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        if (!isEmptyMouse && now - lastPointerMove > 500) {
+            makeEmptyMouse(m_server);
+        }
     }
 }
 
@@ -386,6 +394,11 @@ void ScreenToVnc::init_fingerPointers()
                                            pointer_finger_touch.height,
                                            pointer_finger_touch.bitmask,
                                            pointer_finger_touch.bitmask);
+
+    emptyMousePtr = rfbMakeXCursor(empty_mouse.width,
+                                   empty_mouse.height,
+                                   empty_mouse.bitmask,
+                                   empty_mouse.bitmask);
 }
 
 void ScreenToVnc::mceUnblank()
@@ -402,12 +415,23 @@ void ScreenToVnc::mceUnblank()
 
 /******************************************************************
  * The functions:
+ * - makeEmptyMouse(rfbScreenInfoPtr rfbScreen)
  * - makeRichCursor(rfbScreenInfoPtr rfbScreen)
  * - makeRichCursorTouch(rfbScreenInfoPtr rfbScreen)
  *
  * are based on the example.c example from (GPLv2+)
  * LibVNCServer: http://libvncserver.sourceforge.net/
  ******************************************************************/
+void ScreenToVnc::makeEmptyMouse(rfbScreenInfoPtr rfbScreen)
+{
+    rfbScreen->cursor = emptyMousePtr;
+    rfbScreen->cursor->richSource = empty_mouse.pixel_data;
+
+    rfbScreen->cursor->xhot = 1;
+    rfbScreen->cursor->yhot = 1;
+
+    updateClientCursors(rfbScreen, true);
+}
 
 void ScreenToVnc::makeRichCursor(rfbScreenInfoPtr rfbScreen)
 {
@@ -417,7 +441,7 @@ void ScreenToVnc::makeRichCursor(rfbScreenInfoPtr rfbScreen)
     rfbScreen->cursor->xhot = 32;
     rfbScreen->cursor->yhot = 32;
 
-    updateClientCursors(rfbScreen);
+    updateClientCursors(rfbScreen, false);
 }
 
 void ScreenToVnc::makeRichCursorTouch(rfbScreenInfoPtr rfbScreen)
@@ -428,10 +452,10 @@ void ScreenToVnc::makeRichCursorTouch(rfbScreenInfoPtr rfbScreen)
     rfbScreen->cursor->xhot = 32;
     rfbScreen->cursor->yhot = 32;
 
-    updateClientCursors(rfbScreen);
+    updateClientCursors(rfbScreen, false);
 }
 
-void ScreenToVnc::updateClientCursors(rfbScreenInfoPtr rfbScreen)
+void ScreenToVnc::updateClientCursors(rfbScreenInfoPtr rfbScreen, bool emptyMouse)
 {
     rfbClientIteratorPtr iter;
     rfbClientPtr cl;
@@ -441,6 +465,8 @@ void ScreenToVnc::updateClientCursors(rfbScreenInfoPtr rfbScreen)
         cl->cursorWasChanged = true;
     }
     rfbReleaseClientIterator(iter);
+
+    isEmptyMouse = emptyMouse;
 }
 
 /****************************************************************************
@@ -461,6 +487,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
 {
     ClientData* cd=(ClientData*)cl->clientData;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
+    lastPointerMove = now;
 
     // TODO: smarter way to dedect if in dragMode or not
     switch (buttonMask){
@@ -558,6 +585,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         }
         break;
     default:
+        makeRichCursor(cl->screen);
         break;
     }
 

@@ -44,6 +44,7 @@
 #include <QTimer>
 
 #include "logging.h"
+#include "empty_mouse.h"
 #include "pointer_finger.h"
 #include "pointer_finger_touch.h"
 
@@ -58,11 +59,14 @@ typedef struct ClientData {
 }
 
 // static vars
+static rfbCursor *emptyMousePtr;
 static rfbCursor *pointerFingerPtr;
 static rfbCursor *pointerFingerTouchPtr;
 static qint64 lastPointerEvent;
+static qint64 lastPointerMove;
 static int eventDev;
 static bool exitWhenLastClientGone;
+static bool isEmptyMouse;
 
 class ScreenToVnc : public QObject
 {
@@ -113,9 +117,10 @@ private:
     // mouse handling
     static void init_fingerPointers();
     static void mceUnblank();
+    static void makeEmptyMouse(rfbScreenInfoPtr rfbScreen);
     static void makeRichCursor(rfbScreenInfoPtr rfbScreen);
     static void makeRichCursorTouch(rfbScreenInfoPtr rfbScreen);
-    static void updateClientCursors(rfbScreenInfoPtr rfbScreen);
+    static void updateClientCursors(rfbScreenInfoPtr rfbScreen, bool emptyMouse);
     static void mouseHandler(int buttonMask,int x,int y,rfbClientPtr cl);
 
     // client handling

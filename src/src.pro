@@ -17,7 +17,8 @@ HEADERS += \
     screentovnc.h \
     logging.h \
     pointer_finger.h \
-    pointer_finger_touch.h
+    pointer_finger_touch.h \
+    empty_mouse.h
 
 CONFIG(release, debug|release) {
     DEFINES += QT_NO_DEBUG_OUTPUT
