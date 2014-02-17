@@ -1,4 +1,4 @@
-QT += core
+QT += core dbus
 QT -= gui
 
 TEMPLATE = app

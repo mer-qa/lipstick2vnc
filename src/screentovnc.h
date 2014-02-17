@@ -40,6 +40,7 @@
 #include <QDateTime>
 #include <QObject>
 #include <QSocketNotifier>
+#include <QtDBus/QtDBus>
 #include <QTimer>
 
 #include "logging.h"
@@ -111,6 +112,7 @@ private:
 
     // mouse handling
     static void init_fingerPointers();
+    static void mceUnblank();
     static void makeRichCursor(rfbScreenInfoPtr rfbScreen);
     static void makeRichCursorTouch(rfbScreenInfoPtr rfbScreen);
     static void updateClientCursors(rfbScreenInfoPtr rfbScreen);

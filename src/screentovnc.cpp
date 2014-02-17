@@ -388,6 +388,18 @@ void ScreenToVnc::init_fingerPointers()
                                            pointer_finger_touch.bitmask);
 }
 
+void ScreenToVnc::mceUnblank()
+{
+    IN;
+    QDBusConnection bus = QDBusConnection::systemBus();
+    QDBusInterface dbus_iface("com.nokia.mce",
+                              "/com/nokia/mce/request",
+                              "com.nokia.mce.request",
+                              bus);
+
+    dbus_iface.call("req_display_state_on");
+}
+
 /******************************************************************
  * The functions:
  * - makeRichCursor(rfbScreenInfoPtr rfbScreen)
@@ -538,6 +550,11 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             rfbDefaultPtrAddEvent(buttonMask,x,y,cl);
             cd->dragMode = true;
             lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
+        }
+        break;
+    case 4: /* right button down */
+        if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+            mceUnblank();
         }
         break;
     default:
