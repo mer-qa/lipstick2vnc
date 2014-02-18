@@ -1,10 +1,9 @@
-[core]
+[Unit]
 Before=vnc.service
 
 [Socket]
 ListenStream=5900
 Accept=no
-BindToDevice=rndis0
 
 [Install]
 WantedBy=sockets.target
