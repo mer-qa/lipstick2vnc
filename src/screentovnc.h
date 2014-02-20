@@ -38,6 +38,7 @@
 
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QNetworkInterface>
 #include <QObject>
 #include <QSocketNotifier>
 #include <QtDBus/QtDBus>

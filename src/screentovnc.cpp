@@ -152,7 +152,8 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     int sd_fds = sd_listen_fds(1);
     if (sd_fds){
         for (int i = SD_LISTEN_FDS_START; i <= (SD_LISTEN_FDS_START + sd_fds - 1); i++){
-            if (sd_is_socket(i, AF_INET6, SOCK_STREAM, 1)){
+            if (sd_is_socket(i, AF_INET6, SOCK_STREAM, 1)
+                || sd_is_socket(i, AF_INET, SOCK_STREAM, 1)){
                 LOG() << "using given socket at FD:" << i;
                 m_server->autoPort = false;
                 m_server->port = 0;
@@ -621,11 +622,41 @@ void ScreenToVnc::clientgone(rfbClientPtr cl)
 rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
 {
     IN;
-    cl->clientData = (void*)calloc(sizeof(ClientData),1);
-    ClientData* cd=(ClientData*)cl->clientData;
-    cd->dragMode = false;
-    cl->clientGoneHook = clientgone;
-    return RFB_CLIENT_ACCEPT;
+
+    bool allowConnection = false;
+
+    // TODO: make that configurable, usb device interface is not always rndis0!
+    QNetworkInterface usbIf = QNetworkInterface::interfaceFromName("rndis0");
+
+    QHostAddress remoteAddr = QHostAddress(QString::fromLatin1(cl->host));
+
+    if (remoteAddr.protocol() == QAbstractSocket::IPv6Protocol
+        && remoteAddr.toString().startsWith("::ffff:")){
+        // this is an IPv4-mapped IPv6 address
+        // see: http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm
+        QString remoteAddrIPv4 = remoteAddr.toString().remove("::ffff:");
+        LOG() << "remoteAddrIPv4" << remoteAddrIPv4;
+        remoteAddr = QHostAddress(remoteAddrIPv4);
+    }
+
+    foreach (QNetworkAddressEntry entry, usbIf.addressEntries()){
+        if (remoteAddr.protocol() == entry.ip().protocol()
+            && remoteAddr.isInSubnet(entry.ip(), entry.prefixLength())){
+            allowConnection = true;
+        }
+    }
+
+    if (allowConnection){
+        cl->clientData = (void*)calloc(sizeof(ClientData),1);
+        ClientData* cd=(ClientData*)cl->clientData;
+        cd->dragMode = false;
+        cl->clientGoneHook = clientgone;
+        return RFB_CLIENT_ACCEPT;
+    } else {
+        LOG() << "RFB_CLIENT_REFUSE";
+        cl->clientGoneHook = clientgone;
+        return RFB_CLIENT_REFUSE;
+    }
 }
 
 /****************************************************************************

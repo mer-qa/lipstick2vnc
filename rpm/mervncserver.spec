@@ -8,6 +8,7 @@ URL:            https://github.com/mer-qa/mervncserver
 Source0:        %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5DBus)
+BuildRequires:  pkgconfig(Qt5Network)
 BuildRequires:  pkgconfig(libvncserver)
 BuildRequires:  pkgconfig(libsystemd-daemon)
 BuildRequires:  libjpeg-turbo-devel
