@@ -97,7 +97,7 @@
 #include "screentovnc.h"
 
 // TODO: make that configurable
-#define POINTER_DELAY 100
+#define POINTER_DELAY 10
 
 ScreenToVnc::ScreenToVnc(QObject *parent) :
     QObject(parent)
