@@ -539,7 +539,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
 
             event_pressure.type = EV_ABS;
             event_pressure.code = ABS_MT_PRESSURE;
-            event_pressure.value = 5;
+            event_pressure.value = 68;
 
             event_mt_report.type = EV_SYN;
             event_mt_report.code = SYN_MT_REPORT;
