@@ -25,7 +25,7 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include <QCoreApplication>
+#include <QGuiApplication>
 
 #include "screentovnc.h"
 #include "logging.h"
@@ -61,7 +61,7 @@ static bool configureSignalHandlers()
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication app(argc, argv);
+    QGuiApplication app(argc, argv);
 
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";

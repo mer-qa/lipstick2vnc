@@ -1,24 +1,31 @@
 QT += core dbus network
-QT -= gui
+# needed for qpa/qplatformnativeinterface.h
+QT += platformsupport-private
 
 TEMPLATE = app
 TARGET = mervncserver
 target.path += /usr/bin
 INSTALLS = target
 
-CONFIG   += link_pkgconfig
-PKGCONFIG += libvncserver libsystemd-daemon
+CONFIG   += link_pkgconfig wayland-scanner
+PKGCONFIG += libvncserver libsystemd-daemon wayland-client
+WAYLANDCLIENTSOURCES += protocol/lipstick-recorder.xml
+
 
 SOURCES += \
     screentovnc.cpp \
-    main.cpp
+    main.cpp \
+    recorder.cpp \
+
 
 HEADERS += \
     screentovnc.h \
     logging.h \
     pointer_finger.h \
     pointer_finger_touch.h \
-    empty_mouse.h
+    empty_mouse.h \
+    recorder.h \
+
 
 CONFIG(release, debug|release) {
     DEFINES += QT_NO_DEBUG_OUTPUT

@@ -129,6 +129,8 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
             this,
             SLOT(qtTermSignalHandler()));
 
+    m_recorder = new Recorder();
+
     // init the Framebuffer
     init_fb();
 

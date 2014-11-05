@@ -44,6 +44,7 @@
 #include <QtDBus/QtDBus>
 #include <QTimer>
 
+#include "recorder.h"
 #include "logging.h"
 #include "empty_mouse.h"
 #include "pointer_finger.h"
@@ -110,6 +111,8 @@ private:
     rfbScreenInfoPtr m_server;
     QTimer *m_screenshotTimer;
     QTimer *m_processTimer;
+
+    Recorder *m_recorder;
 
     // init / cleanup functions
     void init_fb(void);

@@ -12,6 +12,11 @@ BuildRequires:  pkgconfig(Qt5Network)
 BuildRequires:  pkgconfig(libvncserver)
 BuildRequires:  pkgconfig(libsystemd-daemon)
 BuildRequires:  libjpeg-turbo-devel
+BuildRequires:  pkgconfig(Qt5Qml)
+BuildRequires:  pkgconfig(Qt5Quick)
+BuildRequires:  pkgconfig(Qt5Gui)
+BuildRequires:  qt5-qtwayland-wayland_egl-devel
+
 
 %description
 A VNC server for Mer QA
@@ -50,7 +55,7 @@ systemctl daemon-reload
 
 %files
 %defattr(-,root,root,-)
-%{_bindir}/%{name}
+%attr(2755, root, privileged) %{_bindir}/%{name}
 /%{_lib}/systemd/system/vnc.socket
 /%{_lib}/systemd/system/vnc.service
 /%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
