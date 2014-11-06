@@ -16,6 +16,8 @@ SOURCES += \
     screentovnc.cpp \
     main.cpp \
     recorder.cpp \
+    frameevent.cpp \
+    buffer.cpp
 
 
 HEADERS += \
@@ -25,6 +27,8 @@ HEADERS += \
     pointer_finger_touch.h \
     empty_mouse.h \
     recorder.h \
+    frameevent.h \
+    buffer.h
 
 
 CONFIG(release, debug|release) {
