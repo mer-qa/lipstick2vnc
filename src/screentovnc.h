@@ -38,8 +38,10 @@
 
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QImage>
 #include <QNetworkInterface>
 #include <QObject>
+#include <QScreen>
 #include <QSocketNotifier>
 #include <QtDBus/QtDBus>
 #include <QTimer>
@@ -49,6 +51,10 @@
 #include "empty_mouse.h"
 #include "pointer_finger.h"
 #include "pointer_finger_touch.h"
+#include "buffer.h"
+#include "frameevent.h"
+
+class Recorder;
 
 extern "C"{
 #include <rfb/rfb.h>
@@ -76,6 +82,8 @@ class ScreenToVnc : public QObject
 public:
     explicit ScreenToVnc(QObject *parent = 0);
     ~ScreenToVnc();
+
+    bool event(QEvent *e) Q_DECL_OVERRIDE;
 
     // Unix signal handlers.
     static void unixHupSignalHandler(int unused);

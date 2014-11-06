@@ -94,6 +94,7 @@
  *
  ****************************************************************************/
 
+#include "frameevent.h"
 #include "screentovnc.h"
 
 // TODO: make that configurable
@@ -129,7 +130,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
             this,
             SLOT(qtTermSignalHandler()));
 
-    m_recorder = new Recorder();
+    m_recorder = new Recorder(this);
 
     // init the Framebuffer
     init_fb();
@@ -221,6 +222,36 @@ ScreenToVnc::~ScreenToVnc()
     rfbScreenCleanup(m_server);
     free(m_compareFrameBuffer);
     OUT;
+}
+
+bool ScreenToVnc::event(QEvent *e)
+{
+    IN << e->type() << FrameEvent::FrameEventType;
+    unsigned int *r;
+    r = (unsigned int *)m_server->frameBuffer;    /* -> remote framebuffer  */
+
+    if (e->type() == FrameEvent::FrameEventType) {
+        LOG() << "save frame";
+        FrameEvent *fe = static_cast<FrameEvent *>(e);
+        Buffer *buf = fe->buffer;
+//        static int id = 0;
+        QElapsedTimer timer;
+        timer.start();
+        QImage img = buf->image.mirrored(false, true);
+        buf->busy = false;
+//        if (m_recorder->m_starving)
+//            m_recorder->recordFrame();
+        int t1 = timer.restart();
+
+//        img.save(QString("frame%1.bmp").arg(id++, 3, 10, QChar('0')));
+        LOG() << "size of the image: " << img.size();
+
+        qDebug()<<t1<<timer.elapsed();
+//        QMutexLocker lock(&rec->m_mutex);
+//        qDebug()<<"fe"<<buf<<rec->m_starving<<id;
+        return true;
+    }
+    return QObject::event(e);
 }
 
 void ScreenToVnc::rfbProcessTrigger()

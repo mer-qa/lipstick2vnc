@@ -50,12 +50,13 @@ static void callback(void *data, wl_callback *cb, uint32_t time)
     QMetaObject::invokeMethod(static_cast<Recorder *>(data), "start");
 }
 
-Recorder::Recorder()
+Recorder::Recorder(ScreenToVnc *screenToVnc)
         : QObject()
         , m_manager(Q_NULLPTR)
         , m_starving(false)
 {
     IN;
+    m_screenToVnc = screenToVnc;
     QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
     m_display = static_cast<wl_display *>(native->nativeResourceForIntegration("display"));
     m_registry = wl_display_get_registry(m_display);
@@ -158,6 +159,7 @@ void Recorder::frame(void *data, lipstick_recorder *recorder, int result, wl_buf
         time = timestamp;
 
         qApp->postEvent(rec->m_buffersHandler, new FrameEvent(buf));
+        qApp->postEvent(rec->m_screenToVnc, new FrameEvent(buf));
     } else {
         qWarning("Unknown frame recording result: %d", result);
     }

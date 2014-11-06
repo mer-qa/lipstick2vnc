@@ -6,6 +6,7 @@
 #include <QMutex>
 #include <wayland-client.h>
 
+#include "screentovnc.h"
 #include "buffer.h"
 #include "frameevent.h"
 
@@ -18,12 +19,13 @@ struct lipstick_recorder;
 
 class Buffer;
 class BuffersHandler;
+class ScreenToVnc;
 
 class Recorder : public QObject
 {
     Q_OBJECT
 public:
-    Recorder();
+    Recorder(ScreenToVnc *screenToVnc);
     ~Recorder();
 
 private slots:
@@ -35,6 +37,8 @@ private:
     static void globalRemove(void *data, wl_registry *registry, uint32_t id);
     static void frame(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer, uint32_t time);
     static void cancel(void *data, lipstick_recorder *recorder, wl_buffer *buffer);
+
+    ScreenToVnc *m_screenToVnc;
 
     wl_display *m_display;
     wl_registry *m_registry;
