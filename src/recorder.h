@@ -6,6 +6,9 @@
 #include <QMutex>
 #include <wayland-client.h>
 
+#include "buffer.h"
+#include "frameevent.h"
+
 class QScreen;
 
 struct wl_display;
