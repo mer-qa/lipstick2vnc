@@ -35,7 +35,8 @@ private slots:
 private:
     static void global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version);
     static void globalRemove(void *data, wl_registry *registry, uint32_t id);
-    static void frame(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer, uint32_t time);
+    static void frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t time, int transform);
+    static void failed(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer);
     static void cancel(void *data, lipstick_recorder *recorder, wl_buffer *buffer);
 
     ScreenToVnc *m_screenToVnc;

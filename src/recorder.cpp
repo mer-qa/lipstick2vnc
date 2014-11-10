@@ -25,7 +25,7 @@ public:
             static int id = 0;
             QElapsedTimer timer;
             timer.start();
-            QImage img = buf->image.mirrored(false, true);
+            QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
             buf->busy = false;
             if (rec->m_starving)
                 rec->recordFrame();
@@ -104,6 +104,7 @@ void Recorder::start()
     m_recorder = lipstick_recorder_manager_create_recorder(m_manager, output);
     static const lipstick_recorder_listener recorderListener = {
         frame,
+        failed,
         cancel
     };
     lipstick_recorder_add_listener(m_recorder, &recorderListener, this);
@@ -139,30 +140,30 @@ void Recorder::recordFrame()
     }
 }
 
-void Recorder::frame(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer, uint32_t timestamp)
+void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t timestamp, int transform)
 {
-    IN;
     Q_UNUSED(recorder)
 
-    if (result == LIPSTICK_RECORDER_RESULT_BAD_BUFFER)
-        qFatal("Failed to record a frame: bad buffer.");
+    Recorder *rec = static_cast<Recorder *>(data);
+    static uint32_t time = 0;
 
-    if (result == LIPSTICK_RECORDER_RESULT_OK) {
-        Recorder *rec = static_cast<Recorder *>(data);
-        static uint32_t time = 0;
+    QMutexLocker lock(&rec->m_mutex);
+    rec->recordFrame();
+    Buffer *buf = static_cast<Buffer *>(wl_buffer_get_user_data(buffer));
 
-        QMutexLocker lock(&rec->m_mutex);
-        rec->recordFrame();
-        Buffer *buf = static_cast<Buffer *>(wl_buffer_get_user_data(buffer));
+    qDebug()<<"frame"<<timestamp - time<<buf;
+    time = timestamp;
 
-        qDebug()<<"frame"<<timestamp - time<<buf;
-        time = timestamp;
+    qApp->postEvent(rec->m_buffersHandler, new FrameEvent(buf, timestamp, transform));
+}
 
-        qApp->postEvent(rec->m_buffersHandler, new FrameEvent(buf));
-        qApp->postEvent(rec->m_screenToVnc, new FrameEvent(buf));
-    } else {
-        qWarning("Unknown frame recording result: %d", result);
-    }
+void Recorder::failed(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer)
+{
+    Q_UNUSED(data)
+    Q_UNUSED(recorder)
+    Q_UNUSED(buffer)
+
+    qFatal("Failed to record a frame, result %d.", result);
 }
 
 void Recorder::cancel(void *data, lipstick_recorder *recorder, wl_buffer *buffer)

@@ -55,7 +55,7 @@ systemctl daemon-reload
 
 %files
 %defattr(-,root,root,-)
-%attr(2755, root, privileged) %{_bindir}/%{name}
+%attr(755, root, privileged) %{_bindir}/%{name}
 /%{_lib}/systemd/system/vnc.socket
 /%{_lib}/systemd/system/vnc.service
 /%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
