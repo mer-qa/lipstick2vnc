@@ -54,6 +54,8 @@
 #include "buffer.h"
 #include "frameevent.h"
 
+#include "wayland-lipstick-recorder-client-protocol.h"
+
 class Recorder;
 
 extern "C"{

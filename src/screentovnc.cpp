@@ -138,7 +138,8 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     // setup vnc server
     // must run after init_rb, so m_scrinfo and m_xPadding is set!
     char *argv[0];
-    m_server = rfbGetScreen(0,argv,(m_scrinfo.xres + m_xPadding), m_scrinfo.yres, 8, 3, m_scrinfo.bits_per_pixel / 8);
+//    m_server = rfbGetScreen(0,argv,(m_scrinfo.xres + m_xPadding), m_scrinfo.yres, 8, 3, m_scrinfo.bits_per_pixel / 8);
+    m_server = rfbGetScreen(0,argv,(m_scrinfo.xres), m_scrinfo.yres, 8, 3, m_scrinfo.bits_per_pixel / 8);
 
     if(!m_server){
         LOG() << "failed to create VNC server";
@@ -181,10 +182,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     m_compareFrameBuffer = (unsigned short int *)calloc((m_scrinfo.xres + m_xPadding) * m_scrinfo.yres, (m_scrinfo.bits_per_pixel / 8));
 
     m_screenshotTimer = new QTimer(this);
-    connect(m_screenshotTimer,
-            SIGNAL(timeout()),
-            this,
-            SLOT(grapFrame()));
+//    connect(m_screenshotTimer,
+//            SIGNAL(timeout()),
+//            this,
+//            SLOT(grapFrame()));
 
     m_processTimer = new QTimer(this);
     connect(m_processTimer,
@@ -226,29 +227,21 @@ ScreenToVnc::~ScreenToVnc()
 
 bool ScreenToVnc::event(QEvent *e)
 {
-    IN << e->type() << FrameEvent::FrameEventType;
-    unsigned int *r;
-    r = (unsigned int *)m_server->frameBuffer;    /* -> remote framebuffer  */
+    IN;
 
     if (e->type() == FrameEvent::FrameEventType) {
-        LOG() << "save frame";
+        LOG() << "push frame to vnc buffer";
         FrameEvent *fe = static_cast<FrameEvent *>(e);
         Buffer *buf = fe->buffer;
-//        static int id = 0;
-        QElapsedTimer timer;
-        timer.start();
-        QImage img = buf->image.mirrored(false, true);
+        QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
         buf->busy = false;
-//        if (m_recorder->m_starving)
-//            m_recorder->recordFrame();
-        int t1 = timer.restart();
 
-//        img.save(QString("frame%1.bmp").arg(id++, 3, 10, QChar('0')));
-        LOG() << "size of the image: " << img.size();
+        if (m_recorder->m_starving)
+            m_recorder->recordFrame();
 
-        qDebug()<<t1<<timer.elapsed();
-//        QMutexLocker lock(&rec->m_mutex);
-//        qDebug()<<"fe"<<buf<<rec->m_starving<<id;
+        memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
+        rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
+
         return true;
     }
     return QObject::event(e);
