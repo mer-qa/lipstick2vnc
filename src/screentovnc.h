@@ -32,11 +32,11 @@
 #include <sys/types.h>
 
 #include <linux/input.h>
-#include <linux/fb.h>
+//#include <linux/fb.h>
 
 #include <systemd/sd-daemon.h>
 
-#include <QCoreApplication>
+#include <QGuiApplication>
 #include <QDateTime>
 #include <QImage>
 #include <QNetworkInterface>
@@ -95,7 +95,7 @@ signals:
 
 public slots:
     // QTimer triggered processing
-    void grapFrame();
+//    void grapFrame();
     void rfbProcessTrigger();
 
     // Qt unix signal handlers.
@@ -110,23 +110,24 @@ private:
     QSocketNotifier *termSignalNotifier;
 
     // FrameBuffer vars
-    int m_fbfd; /* FrameBuffer file descriptor */
-    struct fb_var_screeninfo m_scrinfo;
-    struct fb_fix_screeninfo m_fix_scrinfo;
-    unsigned int *m_fbmmap;
-    unsigned short int *m_compareFrameBuffer;
+//    int m_fbfd; /* FrameBuffer file descriptor */
+//    struct fb_var_screeninfo m_scrinfo;
+//    struct fb_fix_screeninfo m_fix_scrinfo;
+//    unsigned int *m_fbmmap;
+//    unsigned short int *m_compareFrameBuffer;
 
-    int m_xPadding;
+//    int m_xPadding;
 
     rfbScreenInfoPtr m_server;
-    QTimer *m_screenshotTimer;
+//    QTimer *m_screenshotTimer;
     QTimer *m_processTimer;
 
     Recorder *m_recorder;
+    QScreen *m_screen;
 
     // init / cleanup functions
-    void init_fb(void);
-    void cleanup_fb(void);
+//    void init_fb(void);
+//    void cleanup_fb(void);
 
     // mouse handling
     static void init_fingerPointers();

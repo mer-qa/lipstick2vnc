@@ -107,7 +107,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     // TODO: make that configurable?
     exitWhenLastClientGone = false;
     isEmptyMouse = false;
-    m_fbfd = -1;
+//    m_fbfd = -1;
     lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
     lastPointerMove = lastPointerEvent;
 
@@ -132,21 +132,25 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
 
     m_recorder = new Recorder(this);
 
+    m_screen = QGuiApplication::screens().first();
+
     // init the Framebuffer
-    init_fb();
+//    init_fb();
 
     // setup vnc server
     // must run after init_rb, so m_scrinfo and m_xPadding is set!
     char *argv[0];
 //    m_server = rfbGetScreen(0,argv,(m_scrinfo.xres + m_xPadding), m_scrinfo.yres, 8, 3, m_scrinfo.bits_per_pixel / 8);
-    m_server = rfbGetScreen(0,argv,(m_scrinfo.xres), m_scrinfo.yres, 8, 3, m_scrinfo.bits_per_pixel / 8);
+    m_server = rfbGetScreen(0,argv, m_screen->size().width(), m_screen->size().height(), 8, 3, m_screen->depth() / 8);
 
     if(!m_server){
         LOG() << "failed to create VNC server";
     }
 
     m_server->desktopName = "Mer VNC";
-    m_server->frameBuffer=(char*)malloc((m_scrinfo.xres + m_xPadding)*m_scrinfo.yres*(m_scrinfo.bits_per_pixel / 8));
+//    m_server->frameBuffer=(char*)malloc((m_scrinfo.xres + m_xPadding)*m_scrinfo.yres*(m_scrinfo.bits_per_pixel / 8));
+    m_server->frameBuffer=(char*)malloc(m_screen->size().width() * m_screen->size().height() * (m_screen->depth() / 8));
+
     m_server->alwaysShared=(1==1);
 
     m_server->newClientHook = newclient;
@@ -179,9 +183,9 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     rfbInitServer(m_server);
 
     // init compare frame buffer
-    m_compareFrameBuffer = (unsigned short int *)calloc((m_scrinfo.xres + m_xPadding) * m_scrinfo.yres, (m_scrinfo.bits_per_pixel / 8));
+//    m_compareFrameBuffer = (unsigned short int *)calloc((m_scrinfo.xres + m_xPadding) * m_scrinfo.yres, (m_scrinfo.bits_per_pixel / 8));
 
-    m_screenshotTimer = new QTimer(this);
+//    m_screenshotTimer = new QTimer(this);
 //    connect(m_screenshotTimer,
 //            SIGNAL(timeout()),
 //            this,
@@ -203,7 +207,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
 
     // start the process trigger timers
     m_processTimer->start();
-    m_screenshotTimer->start(300);
+//    m_screenshotTimer->start(300);
 
     // inform systemd that we started up
     sd_notifyf(0, "READY=1\n"
@@ -218,10 +222,10 @@ ScreenToVnc::~ScreenToVnc()
 {
     IN;
     close(eventDev);
-    cleanup_fb();
+//    cleanup_fb();
     free(m_server->frameBuffer);
     rfbScreenCleanup(m_server);
-    free(m_compareFrameBuffer);
+//    free(m_compareFrameBuffer);
     OUT;
 }
 
@@ -263,73 +267,73 @@ void ScreenToVnc::rfbProcessTrigger()
  * https://code.google.com/p/android-vnc-server/source/browse/trunk/fbvncserver.c#83
  * GPLv2+
  ****************************************************************************/
-void ScreenToVnc::init_fb(void)
-{
-    IN;
-    m_fbmmap = (unsigned int*)MAP_FAILED;
+//void ScreenToVnc::init_fb(void)
+//{
+//    IN;
+//    m_fbmmap = (unsigned int*)MAP_FAILED;
 
-    // TODO not hardcode! /dev/fb0 ?
-    if ((m_fbfd = open("/dev/fb0", O_RDONLY)) == -1)
-    {
-        LOG() << "cannot open fb device: /dev/fb0";
-        return;
-    }
+//    // TODO not hardcode! /dev/fb0 ?
+//    if ((m_fbfd = open("/dev/fb0", O_RDONLY)) == -1)
+//    {
+//        LOG() << "cannot open fb device: /dev/fb0";
+//        return;
+//    }
 
-    if (ioctl(m_fbfd, FBIOGET_FSCREENINFO, &m_fix_scrinfo) != 0){
-        LOG() << "ioctl error on FBIOGET_FSCREENINFO";
-        return;
-    }
+//    if (ioctl(m_fbfd, FBIOGET_FSCREENINFO, &m_fix_scrinfo) != 0){
+//        LOG() << "ioctl error on FBIOGET_FSCREENINFO";
+//        return;
+//    }
 
-    LOG() << "fix_scrinfo.line_length:" << m_fix_scrinfo.line_length;
-    LOG() << "fix_scrinfo.id" << m_fix_scrinfo.id;
-    LOG() << "fix_scrinfo.smem_len:" << m_fix_scrinfo.smem_len;
-    LOG() << "fix_scrinfo.type:" << m_fix_scrinfo.type;
-    LOG() << "fix_scrinfo.type_aux:" << m_fix_scrinfo.type_aux;
-    LOG() << "fix_scrinfo.xpanstep:" << m_fix_scrinfo.xpanstep;
-    LOG() << "fix_scrinfo.ypanstep:" << m_fix_scrinfo.ypanstep;
-    LOG() << "fix_scrinfo.ywrapstep:" << m_fix_scrinfo.ywrapstep;
-    LOG() << "fix_scrinfo.mmio_len:" << m_fix_scrinfo.mmio_len;
-    LOG() << "fix_scrinfo.capabilities:" << m_fix_scrinfo.capabilities;
+//    LOG() << "fix_scrinfo.line_length:" << m_fix_scrinfo.line_length;
+//    LOG() << "fix_scrinfo.id" << m_fix_scrinfo.id;
+//    LOG() << "fix_scrinfo.smem_len:" << m_fix_scrinfo.smem_len;
+//    LOG() << "fix_scrinfo.type:" << m_fix_scrinfo.type;
+//    LOG() << "fix_scrinfo.type_aux:" << m_fix_scrinfo.type_aux;
+//    LOG() << "fix_scrinfo.xpanstep:" << m_fix_scrinfo.xpanstep;
+//    LOG() << "fix_scrinfo.ypanstep:" << m_fix_scrinfo.ypanstep;
+//    LOG() << "fix_scrinfo.ywrapstep:" << m_fix_scrinfo.ywrapstep;
+//    LOG() << "fix_scrinfo.mmio_len:" << m_fix_scrinfo.mmio_len;
+//    LOG() << "fix_scrinfo.capabilities:" << m_fix_scrinfo.capabilities;
 
-    if (ioctl(m_fbfd, FBIOGET_VSCREENINFO, &m_scrinfo) != 0){
-        LOG() << "ioctl error on FBIOGET_VSCREENINFO";
-        return;
-    }
+//    if (ioctl(m_fbfd, FBIOGET_VSCREENINFO, &m_scrinfo) != 0){
+//        LOG() << "ioctl error on FBIOGET_VSCREENINFO";
+//        return;
+//    }
 
-    LOG() << "scrinfo.xres"           << m_scrinfo.xres;
-    LOG() << "scrinfo.yres"           << m_scrinfo.yres;
-    LOG() << "scrinfo.xres_virtual"   << m_scrinfo.xres_virtual;
-    LOG() << "scrinfo.yres_virtual"   << m_scrinfo.yres_virtual;
-    LOG() << "scrinfo.xoffset"        << m_scrinfo.xoffset;
-    LOG() << "scrinfo.yoffset"        << m_scrinfo.yoffset;
-    LOG() << "scrinfo.bits_per_pixel" << m_scrinfo.bits_per_pixel;
-    LOG() << "m_scrinfo.right_margin" << m_scrinfo.right_margin;
-    LOG() << "m_scrinfo.left_margin"  << m_scrinfo.left_margin;
-    LOG() << "m_scrinfo.vmode"        << m_scrinfo.vmode;
-    LOG() << "m_scrinfo.rotate"       << m_scrinfo.rotate;
+//    LOG() << "scrinfo.xres"           << m_scrinfo.xres;
+//    LOG() << "scrinfo.yres"           << m_scrinfo.yres;
+//    LOG() << "scrinfo.xres_virtual"   << m_scrinfo.xres_virtual;
+//    LOG() << "scrinfo.yres_virtual"   << m_scrinfo.yres_virtual;
+//    LOG() << "scrinfo.xoffset"        << m_scrinfo.xoffset;
+//    LOG() << "scrinfo.yoffset"        << m_scrinfo.yoffset;
+//    LOG() << "scrinfo.bits_per_pixel" << m_scrinfo.bits_per_pixel;
+//    LOG() << "m_scrinfo.right_margin" << m_scrinfo.right_margin;
+//    LOG() << "m_scrinfo.left_margin"  << m_scrinfo.left_margin;
+//    LOG() << "m_scrinfo.vmode"        << m_scrinfo.vmode;
+//    LOG() << "m_scrinfo.rotate"       << m_scrinfo.rotate;
 
-    m_xPadding = (m_fix_scrinfo.line_length / (m_scrinfo.bits_per_pixel / 8) ) - m_scrinfo.xres;
+//    m_xPadding = (m_fix_scrinfo.line_length / (m_scrinfo.bits_per_pixel / 8) ) - m_scrinfo.xres;
 
-    m_fbmmap = (unsigned int*)mmap(NULL, m_fix_scrinfo.smem_len, PROT_READ, MAP_SHARED, m_fbfd, 0);
+//    m_fbmmap = (unsigned int*)mmap(NULL, m_fix_scrinfo.smem_len, PROT_READ, MAP_SHARED, m_fbfd, 0);
 
-    if (m_fbmmap == (unsigned int*)MAP_FAILED){
-        LOG() << "mmap failed";
-        return;
-    }
-}
+//    if (m_fbmmap == (unsigned int*)MAP_FAILED){
+//        LOG() << "mmap failed";
+//        return;
+//    }
+//}
 
 /****************************************************************************
  * based on:
  * https://code.google.com/p/android-vnc-server/source/browse/trunk/fbvncserver.c#118
  * GPLv2+
  ****************************************************************************/
-void ScreenToVnc::cleanup_fb(void)
-{
-    IN;
-    if(m_fbfd != -1){
-        close(m_fbfd);
-    }
-}
+//void ScreenToVnc::cleanup_fb(void)
+//{
+//    IN;
+//    if(m_fbfd != -1){
+//        close(m_fbfd);
+//    }
+//}
 
 
 /****************************************************************************
@@ -337,73 +341,73 @@ void ScreenToVnc::cleanup_fb(void)
  * https://code.google.com/p/android-vnc-server/source/browse/trunk/fbvncserver.c#381
  * GPLv2+
  ****************************************************************************/
-void ScreenToVnc::grapFrame()
-{
-    if (rfbIsActive(m_server) && m_server->clientHead != NULL){
-        unsigned int *f, *c, *r;
-        int x, y;
+//void ScreenToVnc::grapFrame()
+//{
+//    if (rfbIsActive(m_server) && m_server->clientHead != NULL){
+//        unsigned int *f, *c, *r;
+//        int x, y;
 
-        int min_x = 99999;
-        int min_y = 99999;
-        int max_x = -1;
-        int max_y = -1;
-        bool bufferChanged = false;
+//        int min_x = 99999;
+//        int min_y = 99999;
+//        int max_x = -1;
+//        int max_y = -1;
+//        bool bufferChanged = false;
 
-        f = (unsigned int *)m_fbmmap;                 /* -> framebuffer         */
-        c = (unsigned int *)m_compareFrameBuffer;     /* -> compare framebuffer */
-        r = (unsigned int *)m_server->frameBuffer;    /* -> remote framebuffer  */
+//        f = (unsigned int *)m_fbmmap;                 /* -> framebuffer         */
+////        c = (unsigned int *)m_compareFrameBuffer;     /* -> compare framebuffer */
+//        r = (unsigned int *)m_server->frameBuffer;    /* -> remote framebuffer  */
 
-        struct fb_var_screeninfo scrinfo;
-        ioctl(m_fbfd, FBIOGET_VSCREENINFO, &scrinfo);
-        int offset = (scrinfo.xres + m_xPadding) * scrinfo.yoffset;
+//        struct fb_var_screeninfo scrinfo;
+//        ioctl(m_fbfd, FBIOGET_VSCREENINFO, &scrinfo);
+//        int offset = (scrinfo.xres + m_xPadding) * scrinfo.yoffset;
 
-        for (y = 0; y < m_scrinfo.yres; y++)
-        {
-            for (x = 0; x < (m_scrinfo.xres + m_xPadding); x++)
-            {
-                unsigned int pixel = *(f + offset);
+//        for (y = 0; y < m_scrinfo.yres; y++)
+//        {
+//            for (x = 0; x < (m_scrinfo.xres + m_xPadding); x++)
+//            {
+//                unsigned int pixel = *(f + offset);
 
-                if (pixel != *c)
-                {
-                    *c = pixel;
-                    *r = pixel;
-                    bufferChanged = true;
+//                if (pixel != *c)
+//                {
+//                    *c = pixel;
+//                    *r = pixel;
+//                    bufferChanged = true;
 
-                    if (x < min_x)
-                        min_x = x;
+//                    if (x < min_x)
+//                        min_x = x;
 
-                    if (y < min_y)
-                        min_y = y;
+//                    if (y < min_y)
+//                        min_y = y;
 
-                    if (x > max_x)
-                        max_x = x;
+//                    if (x > max_x)
+//                        max_x = x;
 
-                    if (y > max_y)
-                        max_y = y;
-                }
-                f++, c++;
-                r++;
-            }
-        }
+//                    if (y > max_y)
+//                        max_y = y;
+//                }
+//                f++, c++;
+//                r++;
+//            }
+//        }
 
-        if (bufferChanged)
-        {
-//            LOG() << "Dirty page:" << min_x << "x"
-//                  << min_y << "x"
-//                  << max_x << "x"
-//                  << max_y;
+//        if (bufferChanged)
+//        {
+////            LOG() << "Dirty page:" << min_x << "x"
+////                  << min_y << "x"
+////                  << max_x << "x"
+////                  << max_y;
 
-            // TODO: somewhere we are off by one?
-            rfbMarkRectAsModified(m_server, min_x, min_y, max_x+1, max_y+1);
-        }
+//            // TODO: somewhere we are off by one?
+//            rfbMarkRectAsModified(m_server, min_x, min_y, max_x+1, max_y+1);
+//        }
 
-        // TODO: make the 500ms configurable?!
-        qint64 now = QDateTime::currentMSecsSinceEpoch();
-        if (!isEmptyMouse && now - lastPointerMove > 500) {
-            makeEmptyMouse(m_server);
-        }
-    }
-}
+//        // TODO: make the 500ms configurable?!
+//        qint64 now = QDateTime::currentMSecsSinceEpoch();
+//        if (!isEmptyMouse && now - lastPointerMove > 500) {
+//            makeEmptyMouse(m_server);
+//        }
+//    }
+//}
 
 
 /****************************************************************************
@@ -715,7 +719,7 @@ void ScreenToVnc::qtTermSignalHandler()
     ::read(unixTermSignalFd[1], &tmp, sizeof(tmp));
 
     LOG() << "TERM Signal received, about to exit...";
-    m_screenshotTimer->stop();
+//    m_screenshotTimer->stop();
     m_processTimer->stop();
 
     termSignalNotifier->setEnabled(true);
