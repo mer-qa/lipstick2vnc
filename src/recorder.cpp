@@ -142,6 +142,7 @@ void Recorder::recordFrame()
 
 void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t timestamp, int transform)
 {
+    IN;
     Q_UNUSED(recorder)
 
     Recorder *rec = static_cast<Recorder *>(data);
@@ -159,6 +160,7 @@ void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer,
 
 void Recorder::failed(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer)
 {
+    IN;
     Q_UNUSED(data)
     Q_UNUSED(recorder)
     Q_UNUSED(buffer)
