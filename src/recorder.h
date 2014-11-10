@@ -27,10 +27,12 @@ class Recorder : public QObject
 public:
     Recorder(ScreenToVnc *screenToVnc);
     ~Recorder();
+    void recordFrame();
+
+    bool m_starving;
 
 private slots:
     void start();
-    void recordFrame();
 
 private:
     static void global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version);
@@ -48,9 +50,8 @@ private:
     lipstick_recorder *m_recorder;
     QScreen *m_screen;
     QList<Buffer *> m_buffers;
-    bool m_starving;
-    QThread *m_buffersThread;
-    BuffersHandler *m_buffersHandler;
+//    QThread *m_buffersThread;
+//    BuffersHandler *m_buffersHandler;
     QMutex m_mutex;
 
     friend class BuffersHandler;
