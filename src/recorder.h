@@ -32,6 +32,9 @@ public:
 
     bool m_starving;
 
+signals:
+    void ready();
+
 private slots:
     void start();
 

@@ -116,6 +116,7 @@ void Recorder::start()
         m_buffers << buffer;
     }
     recordFrame();
+    emit ready();
 }
 
 void Recorder::recordFrame()
