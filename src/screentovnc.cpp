@@ -73,6 +73,8 @@
 // TODO: make that configurable
 #define POINTER_DELAY 10
 
+Recorder *ScreenToVnc::m_recorder;
+
 ScreenToVnc::ScreenToVnc(QObject *parent) :
     QObject(parent)
 {
@@ -104,7 +106,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
             this,
             SLOT(qtTermSignalHandler()));
 
-    m_recorder = new Recorder(this);
+    ScreenToVnc::m_recorder = new Recorder(this);
 
     m_screen = QGuiApplication::screens().first();
 
@@ -148,7 +150,9 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     makeRichCursor(m_server);
 
     // Initialize the VNC server
+    LOG() << "inetdInitDone" << m_server->listenSock;
     rfbInitServer(m_server);
+    LOG() << "inetdInitDone" << m_server->listenSock;
 
     m_processTimer = new QTimer(this);
     connect(m_processTimer,
@@ -166,6 +170,23 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
 
     // start the process trigger timers
     m_processTimer->start();
+
+    QDBusInterface mceInterface("com.nokia.mce",
+                                "/com/nokia/mce/signal",
+                                "com.nokia.mce.signal",
+                                QDBusConnection::systemBus(),
+                                this);
+
+    mceInterface.connection().connect("com.nokia.mce",
+                                      "/com/nokia/mce/signal",
+                                      "com.nokia.mce.signal",
+                                      "display_status_ind",
+                                      this,
+                                      SLOT(mceBlankHandler(QString)));
+
+    if(getDisplayStatus() == displayOff){
+        mceBlankHandler("off");
+    }
 
     // inform systemd that we started up
     sd_notifyf(0, "READY=1\n"
@@ -213,12 +234,18 @@ void ScreenToVnc::rfbProcessTrigger()
 //    usec = m_server->deferUpdateTime*1000;
 
     if (m_server->clientHead != NULL && m_clientFlag == false){
-        m_recorder->repaint();
+//        m_recorder->repaint();
         m_clientFlag = true;
     }
 
     if (m_server->clientHead == NULL){
         m_clientFlag = false;
+    }
+
+    // TODO: make the 500ms configurable?!
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (!isEmptyMouse && now - lastPointerMove > 500) {
+        makeEmptyMouse(m_server);
     }
 
     rfbProcessEvents(m_server,0);
@@ -256,6 +283,57 @@ void ScreenToVnc::mceUnblank()
                               bus);
 
     dbus_iface.call("req_display_state_on");
+}
+
+void ScreenToVnc::mceBlankHandler(QString state)
+{
+    IN;
+    LOG() << "state:" << state;
+
+    if (state == "off"){
+        LOG();
+
+        for (int j=m_screen->size().height()-1;j>=0;j--){
+
+            for(int i=m_screen->size().width()-1;i>=0;i--)
+                for(int k=2;k>=0;k--)
+                    m_server->frameBuffer[(j*m_screen->size().width()+i)*4+k]=0;
+
+            for(int i=m_screen->size().width()*4;i<m_screen->size().width()*4;i++)
+                m_server->frameBuffer[j*m_screen->size().width()*4+i]=0;
+        }
+        rfbMarkRectAsModified(m_server,0,0,m_screen->size().width() ,m_screen->size().height());
+    }
+}
+
+enum displayState ScreenToVnc::getDisplayStatus()
+{
+    IN;
+
+    QDBusMessage requestMsg;
+    QDBusMessage replyMsg;
+    QString status;
+
+    requestMsg = QDBusMessage::createMethodCall("com.nokia.mce",
+                                                "/com/nokia/mce/request",
+                                                "com.nokia.mce.request",
+                                                "get_display_status");
+
+    replyMsg = QDBusConnection::systemBus().call(requestMsg, QDBus::Block, 3000);
+
+    if (replyMsg.type() == QDBusMessage::ErrorMessage) {
+        LOG() << "Failed to obtain display status:" << replyMsg.errorMessage();
+    }
+    else {
+        status = replyMsg.arguments()[0].toString();
+
+        if(status == "on")
+            return displayOn;
+        else
+            return displayOff;
+    }
+
+    return displayOff;
 }
 
 /******************************************************************
@@ -495,6 +573,7 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
         ClientData* cd=(ClientData*)cl->clientData;
         cd->dragMode = false;
         cl->clientGoneHook = clientgone;
+        m_recorder->repaint();
         return RFB_CLIENT_ACCEPT;
     } else {
         LOG() << "RFB_CLIENT_REFUSE";

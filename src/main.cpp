@@ -68,6 +68,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
+
     ScreenToVnc screen2vnc;
     return app.exec();
 }

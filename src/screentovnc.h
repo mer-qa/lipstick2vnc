@@ -77,6 +77,11 @@ static int eventDev;
 static bool exitWhenLastClientGone;
 static bool isEmptyMouse;
 
+enum displayState{
+    displayOn,
+    displayOff
+};
+
 class ScreenToVnc : public QObject
 {
     Q_OBJECT
@@ -90,6 +95,8 @@ public:
     static void unixHupSignalHandler(int unused);
     static void unixTermSignalHandler(int unused);
 
+    static Recorder *m_recorder;
+
 signals:
 
 public slots:
@@ -99,6 +106,8 @@ public slots:
     // Qt unix signal handlers.
     void qtHubSignalHandler();
     void qtTermSignalHandler();
+
+    void mceBlankHandler(QString state);
 
 private: 
     // Unix Signal Handler vars
@@ -110,7 +119,6 @@ private:
     rfbScreenInfoPtr m_server;
     QTimer *m_processTimer;
 
-    Recorder *m_recorder;
     QScreen *m_screen;
 
     // mouse handling
@@ -127,6 +135,8 @@ private:
     static enum rfbNewClientAction newclient(rfbClientPtr cl);
 
     bool m_clientFlag;
+
+    enum displayState getDisplayStatus();
 };
 
 #endif // SCREENTOVNC_H
