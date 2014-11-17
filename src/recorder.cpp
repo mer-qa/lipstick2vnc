@@ -140,6 +140,12 @@ void Recorder::recordFrame()
     }
 }
 
+void Recorder::repaint()
+{
+    IN;
+    lipstick_recorder_repaint(m_recorder);
+}
+
 void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t timestamp, int transform)
 {
     IN;

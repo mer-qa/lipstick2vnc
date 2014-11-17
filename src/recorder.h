@@ -28,6 +28,7 @@ public:
     Recorder(ScreenToVnc *screenToVnc);
     ~Recorder();
     void recordFrame();
+    void repaint();
 
     bool m_starving;
 
