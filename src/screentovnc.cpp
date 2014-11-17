@@ -108,6 +108,11 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
 
     ScreenToVnc::m_recorder = new Recorder(this);
 
+    connect(m_recorder,
+            SIGNAL(ready()),
+            this,
+            SLOT(recorderReady()));
+
     m_screen = QGuiApplication::screens().first();
 
     // setup vnc server
@@ -168,8 +173,6 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
         return;
     }
 
-    // start the process trigger timers
-    m_processTimer->start();
 
     QDBusInterface mceInterface("com.nokia.mce",
                                 "/com/nokia/mce/signal",
@@ -193,6 +196,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
                "STATUS=Processing requests...\n"
                "MAINPID=%lu",
                (unsigned long) getpid());
+
 
     OUT;
 }
@@ -226,6 +230,13 @@ bool ScreenToVnc::event(QEvent *e)
         return true;
     }
     return QObject::event(e);
+}
+
+void ScreenToVnc::recorderReady()
+{
+    IN;
+    // start the process trigger timers
+    m_processTimer->start();
 }
 
 void ScreenToVnc::rfbProcessTrigger()

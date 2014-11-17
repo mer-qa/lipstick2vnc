@@ -109,6 +109,8 @@ public slots:
 
     void mceBlankHandler(QString state);
 
+    void recorderReady();
+
 private: 
     // Unix Signal Handler vars
     static int unixHupSignalFd[2];
