@@ -125,6 +125,8 @@ private:
     // client handling
     static void clientgone(rfbClientPtr cl);
     static enum rfbNewClientAction newclient(rfbClientPtr cl);
+
+    bool m_clientFlag;
 };
 
 #endif // SCREENTOVNC_H
