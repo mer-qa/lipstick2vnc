@@ -71,6 +71,10 @@ int main(int argc, char *argv[])
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
 
     ScreenToVnc screen2vnc;
+    if(!screen2vnc.m_allFine){
+        LOG() << "something failed to initialize!";
+        return 1;
+    }
     return app.exec();
 }
 

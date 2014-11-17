@@ -79,6 +79,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     QObject(parent)
 {
     IN;
+    m_allFine = true;
     // TODO: make that configurable?
     exitWhenLastClientGone = false;
     isEmptyMouse = false;
@@ -121,6 +122,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
 
     if(!m_server){
         LOG() << "failed to create VNC server";
+        m_allFine = false;
     }
 
     m_server->desktopName = "Mer VNC";
@@ -155,9 +157,11 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     makeRichCursor(m_server);
 
     // Initialize the VNC server
-    LOG() << "inetdInitDone" << m_server->listenSock;
     rfbInitServer(m_server);
-    LOG() << "inetdInitDone" << m_server->listenSock;
+    if (m_server->listenSock < 0){
+        LOG() << "Server is not listening on any sockets! Quit";
+        m_allFine = false;
+    }
 
     m_processTimer = new QTimer(this);
     connect(m_processTimer,
@@ -170,7 +174,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     eventDev = open("/dev/input/event0", O_RDWR);
     if(eventDev < 0) {
         LOG() << "can't open /dev/input/event0";
-        return;
+        m_allFine = false;
     }
 
 
@@ -191,12 +195,14 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
         mceBlankHandler("off");
     }
 
-    // inform systemd that we started up
-    sd_notifyf(0, "READY=1\n"
-               "STATUS=Processing requests...\n"
-               "MAINPID=%lu",
-               (unsigned long) getpid());
-
+    if (m_allFine){
+        // inform systemd that we started up
+        sd_notifyf(0,
+                   "READY=1\n"
+                   "STATUS=Processing requests...\n"
+                   "MAINPID=%lu",
+                   (unsigned long) getpid());
+    }
 
     OUT;
 }

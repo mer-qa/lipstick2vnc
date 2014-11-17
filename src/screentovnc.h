@@ -96,6 +96,7 @@ public:
     static void unixTermSignalHandler(int unused);
 
     static Recorder *m_recorder;
+    bool m_allFine;
 
 signals:
 
