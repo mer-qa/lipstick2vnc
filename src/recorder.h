@@ -48,7 +48,7 @@ private:
     wl_registry *m_registry;
     wl_shm *m_shm;
     lipstick_recorder_manager *m_manager;
-    lipstick_recorder *m_recorder;
+    lipstick_recorder *m_lipstickRecorder;
     QScreen *m_screen;
     QList<Buffer *> m_buffers;
 //    QThread *m_buffersThread;

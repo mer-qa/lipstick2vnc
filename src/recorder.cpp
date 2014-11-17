@@ -86,7 +86,7 @@ Recorder::~Recorder()
     IN;
 //    m_buffersThread->quit();
 //    m_buffersThread->wait();
-    lipstick_recorder_destroy(m_recorder);
+    lipstick_recorder_destroy(m_lipstickRecorder);
 //    delete m_buffersHandler;
 //    delete m_buffersThread;
 }
@@ -101,13 +101,13 @@ void Recorder::start()
     m_screen = QGuiApplication::screens().first();
     wl_output *output = static_cast<wl_output *>(native->nativeResourceForScreen("output", m_screen));
 
-    m_recorder = lipstick_recorder_manager_create_recorder(m_manager, output);
+    m_lipstickRecorder = lipstick_recorder_manager_create_recorder(m_manager, output);
     static const lipstick_recorder_listener recorderListener = {
         frame,
         failed,
         cancel
     };
-    lipstick_recorder_add_listener(m_recorder, &recorderListener, this);
+    lipstick_recorder_add_listener(m_lipstickRecorder, &recorderListener, this);
 
     for (int i = 0; i < 6; ++i) {
         Buffer *buffer = Buffer::create(m_shm, m_screen);
@@ -129,7 +129,7 @@ void Recorder::recordFrame()
         }
     }
     if (buf) {
-        lipstick_recorder_record_frame(m_recorder, buf->buffer);
+        lipstick_recorder_record_frame(m_lipstickRecorder, buf->buffer);
         wl_display_flush(m_display);
         buf->busy = true;
         m_starving = false;
@@ -143,7 +143,7 @@ void Recorder::recordFrame()
 void Recorder::repaint()
 {
     IN;
-    lipstick_recorder_repaint(m_recorder);
+    lipstick_recorder_repaint(m_lipstickRecorder);
 }
 
 void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t timestamp, int transform)
