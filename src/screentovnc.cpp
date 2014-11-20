@@ -192,6 +192,16 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
         if(fd < 0) {
             LOG() << "can't open:" << fileInfo.absoluteFilePath();
         } else {
+            char name[64];
+            if (ioctl(fd, EVIOCGNAME(sizeof (name)), name) != -1){
+                LOG() << "Device name:" << name;
+            }
+            input_id device_id;
+            if (ioctl(fd, EVIOCGID, &device_id) != -1){
+                LOG() << "Vendor:" << device_id.vendor;
+                LOG() << "Product:" << device_id.product;
+                LOG() << "Version:" << device_id.version;
+            }
             unsigned char abscaps[(ABS_MAX / 8) + 1];
             memset(abscaps, '\0', sizeof (abscaps));
 
