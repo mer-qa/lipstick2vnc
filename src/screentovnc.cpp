@@ -73,6 +73,8 @@
 // TODO: make that configurable
 #define POINTER_DELAY 10
 
+#define test_bit(a, b) (a[b/8] & (1<<(b%8)))
+
 Recorder *ScreenToVnc::m_recorder;
 
 ScreenToVnc::ScreenToVnc(QObject *parent) :
@@ -170,10 +172,47 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
             SLOT(rfbProcessTrigger()));
 
     // open the event device
-    // TODO: not Hardcode?
-    eventDev = open("/dev/input/event0", O_RDWR);
-    if(eventDev < 0) {
-        LOG() << "can't open /dev/input/event0";
+    isTypeA = true;
+    eventDev = -1;
+
+    QDir dir;
+    QStringList filters;
+    filters << "event*" ;
+    dir.setNameFilters(filters);
+    dir.setSorting(QDir::Name);
+    dir.setFilter(QDir::System);
+    dir.setPath("/dev/input/");
+
+    QFileInfoList list = dir.entryInfoList();
+    for (int i = 0; i < list.size(); ++i) {
+        QFileInfo fileInfo = list.at(i);
+        LOG() << "probe:" << fileInfo.absoluteFilePath();
+
+        int fd = open(fileInfo.absoluteFilePath().toLocal8Bit().data(), O_RDWR);
+        if(fd < 0) {
+            LOG() << "can't open:" << fileInfo.absoluteFilePath();
+        } else {
+            unsigned char abscaps[(ABS_MAX / 8) + 1];
+            memset(abscaps, '\0', sizeof (abscaps));
+
+            if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof (abscaps)), abscaps) != -1){
+                if (test_bit(abscaps, ABS_MT_POSITION_X)
+                        && test_bit(abscaps, ABS_MT_POSITION_Y)
+                        && test_bit(abscaps, ABS_MT_PRESSURE)){
+                    LOG() << fileInfo.absoluteFilePath() << "looks right for a touchscreen type A";
+                    isTypeA = true;
+                    eventDev = fd;
+                    if (test_bit(abscaps, ABS_MT_SLOT)
+                            && test_bit(abscaps, ABS_MT_TRACKING_ID)){
+                        LOG() << "OK seems to be touchscreen type B";
+                        isTypeA = false;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    if (eventDev < 0){
         m_allFine = false;
     }
 

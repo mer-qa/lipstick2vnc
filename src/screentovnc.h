@@ -76,6 +76,7 @@ static qint64 lastPointerMove;
 static int eventDev;
 static bool exitWhenLastClientGone;
 static bool isEmptyMouse;
+static bool isTypeA;
 
 enum displayState{
     displayOn,
