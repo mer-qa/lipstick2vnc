@@ -477,14 +477,16 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
     ClientData* cd=(ClientData*)cl->clientData;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
     lastPointerMove = now;
+    int nextClientId = 0;
 
     // TODO: smarter way to dedect if in dragMode or not
     switch (buttonMask){
     case 0: /*all buttons up */
         if (cd->dragMode){
-            struct input_event event_mt_report,event_end;
+            struct input_event event_mt_report, event_end, event_mt_tracking_id;
             memset(&event_mt_report, 0, sizeof(event_mt_report));
             memset(&event_end, 0, sizeof(event_end));
+            memset(&event_mt_tracking_id, 0, sizeof(event_mt_tracking_id));
 
             event_mt_report.type = EV_SYN;
             event_mt_report.code = SYN_MT_REPORT;
@@ -494,9 +496,20 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             event_end.code = SYN_REPORT;
             event_end.value = 0;
 
-            if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
-                LOG() << "write event_mt_report failed: " << strerror(errno);
-                return;
+            event_mt_tracking_id.type = EV_ABS;
+            event_mt_tracking_id.code = ABS_MT_TRACKING_ID;
+            event_mt_tracking_id.value = 0xffffffff;
+
+            if (isTypeA) {
+                if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
+                    LOG() << "write event_mt_report failed: " << strerror(errno);
+                    return;
+                }
+            } else {
+                if(write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
+                    LOG() << "write event_mt_tracking_id failed: " << strerror(errno);
+                    return;
+                }
             }
 
             if(write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
@@ -510,20 +523,30 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         break;
     case 1: /* left button down */
         if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
-            struct input_event event_x, event_y, event_pressure, event_mt_report,event_end;
+            struct input_event event_x, event_y, event_pressure, event_mt_report, event_end, event_mt_tracking_id, event_mt_touch_major;
             memset(&event_x, 0, sizeof(event_x));
             memset(&event_y, 0, sizeof(event_y));
             memset(&event_pressure, 0, sizeof(event_pressure));
             memset(&event_mt_report, 0, sizeof(event_mt_report));
             memset(&event_end, 0, sizeof(event_end));
+            memset(&event_mt_tracking_id, 0, sizeof(event_mt_tracking_id));
+            memset(&event_mt_touch_major, 0, sizeof(event_mt_touch_major));
+
+            nextClientId = cd->eventId + 1;
 
             event_x.type = EV_ABS;
             event_x.code = ABS_MT_POSITION_X;
-            event_x.value = x*2;
+            if (isTypeA)
+                event_x.value = x*2; // TODO: where is the 2 comming from?
+            else
+                event_x.value = x;
 
             event_y.type = EV_ABS;
             event_y.code = ABS_MT_POSITION_Y;
-            event_y.value = y*2;
+            if (isTypeA)
+                event_y.value = y*2; // TODO: where is the 2 comming from?
+            else
+                event_y.value = y;
 
             event_pressure.type = EV_ABS;
             event_pressure.code = ABS_MT_PRESSURE;
@@ -536,6 +559,21 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             event_end.type = EV_SYN;
             event_end.code = SYN_REPORT;
             event_end.value = 0;
+
+            event_mt_tracking_id.type = EV_ABS;
+            event_mt_tracking_id.code = ABS_MT_TRACKING_ID;
+            event_mt_tracking_id.value = nextClientId;
+
+            event_mt_touch_major.type = EV_ABS;
+            event_mt_touch_major.code = ABS_MT_TOUCH_MAJOR;
+            event_mt_touch_major.value = 0x6;
+
+            if(!isTypeA && !cd->dragMode){
+                if(write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
+                    LOG() << "write event_mt_tracking_id failed: " << strerror(errno);
+                    return;
+                }
+            }
 
             if(write(eventDev, &event_x, sizeof(event_x)) < sizeof(event_x)) {
                 LOG() << "write event_x failed: " << strerror(errno);
@@ -552,9 +590,16 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
                 return;
             }
 
-            if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
-                LOG() << "write event_mt_report failed: " << strerror(errno);
-                return;
+            if(isTypeA) {
+                if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
+                    LOG() << "write event_mt_report failed: " << strerror(errno);
+                    return;
+                }
+            } else {
+                if(write(eventDev, &event_mt_touch_major, sizeof(event_mt_touch_major)) < sizeof(event_mt_touch_major)) {
+                    LOG() << "write event_mt_touch_major failed: " << strerror(errno);
+                    return;
+                }
             }
 
             if(write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
@@ -566,6 +611,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             rfbDefaultPtrAddEvent(buttonMask,x,y,cl);
             cd->dragMode = true;
             lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
+            cd->eventId = nextClientId;
         }
         break;
     case 4: /* right button down */
@@ -638,6 +684,7 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
         cl->clientData = (void*)calloc(sizeof(ClientData),1);
         ClientData* cd=(ClientData*)cl->clientData;
         cd->dragMode = false;
+        cd->eventId = 0;
         cl->clientGoneHook = clientgone;
         m_recorder->repaint();
         return RFB_CLIENT_ACCEPT;

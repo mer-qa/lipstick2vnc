@@ -64,6 +64,7 @@ typedef struct ClientData {
     rfbBool oldButton;
     int oldx,oldy;
     bool dragMode;
+    int eventId;
 } ClientData;
 }
 
