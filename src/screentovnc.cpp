@@ -221,6 +221,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
                 }
             }
         }
+        close(fd);
     }
     if (eventDev < 0){
         m_allFine = false;
