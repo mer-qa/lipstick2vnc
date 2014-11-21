@@ -139,8 +139,6 @@ private:
     static void clientgone(rfbClientPtr cl);
     static enum rfbNewClientAction newclient(rfbClientPtr cl);
 
-    bool m_clientFlag;
-
     enum displayState getDisplayStatus();
 };
 

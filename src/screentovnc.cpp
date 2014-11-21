@@ -88,8 +88,6 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
     lastPointerMove = lastPointerEvent;
 
-    m_clientFlag = false;
-
     // Unix Signal Handling set up
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, unixHupSignalFd))
         qFatal("Couldn't create HUP socketpair");
@@ -299,15 +297,6 @@ void ScreenToVnc::rfbProcessTrigger()
 {
 //    long usec;
 //    usec = m_server->deferUpdateTime*1000;
-
-    if (m_server->clientHead != NULL && m_clientFlag == false){
-//        m_recorder->repaint();
-        m_clientFlag = true;
-    }
-
-    if (m_server->clientHead == NULL){
-        m_clientFlag = false;
-    }
 
     // TODO: make the 500ms configurable?!
     qint64 now = QDateTime::currentMSecsSinceEpoch();
