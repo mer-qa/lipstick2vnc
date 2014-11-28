@@ -113,6 +113,7 @@ public slots:
     void mceBlankHandler(QString state);
 
     void recorderReady();
+    void repaintTimeOut();
 
 private: 
     // Unix Signal Handler vars
@@ -125,6 +126,9 @@ private:
     QTimer *m_processTimer;
 
     QScreen *m_screen;
+
+    QTimer *m_repaintTimer;
+    bool m_wasRepaintTimeOut;
 
     // mouse handling
     static void init_fingerPointers();

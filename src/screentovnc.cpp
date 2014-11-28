@@ -87,6 +87,15 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     isEmptyMouse = false;
     lastPointerEvent = QDateTime::currentMSecsSinceEpoch();
     lastPointerMove = lastPointerEvent;
+    m_repaintTimer = new QTimer(this);
+    m_repaintTimer->setSingleShot(true);
+    m_repaintTimer->setInterval(300);
+    connect(m_repaintTimer,
+            SIGNAL(timeout()),
+            this,
+            SLOT(repaintTimeOut()));
+
+    m_wasRepaintTimeOut = false;
 
     // Unix Signal Handling set up
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, unixHupSignalFd))
@@ -281,6 +290,12 @@ bool ScreenToVnc::event(QEvent *e)
         memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
         rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
 
+        if (m_wasRepaintTimeOut){
+            m_wasRepaintTimeOut = false;
+        } else {
+            m_repaintTimer->start();
+        }
+
         return true;
     }
     return QObject::event(e);
@@ -291,6 +306,13 @@ void ScreenToVnc::recorderReady()
     IN;
     // start the process trigger timers
     m_processTimer->start();
+}
+
+void ScreenToVnc::repaintTimeOut()
+{
+    IN;
+    m_wasRepaintTimeOut = true;
+    m_recorder->repaint();
 }
 
 void ScreenToVnc::rfbProcessTrigger()
