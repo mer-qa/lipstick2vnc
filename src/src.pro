@@ -34,5 +34,3 @@ HEADERS += \
 CONFIG(release, debug|release) {
     DEFINES += QT_NO_DEBUG_OUTPUT
 }
-
-DEFINES += SD_DAEMON_DISABLE_MQ
