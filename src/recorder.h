@@ -77,11 +77,7 @@ private:
     lipstick_recorder *m_lipstickRecorder;
     QScreen *m_screen;
     QList<Buffer *> m_buffers;
-//    QThread *m_buffersThread;
-//    BuffersHandler *m_buffersHandler;
     QMutex m_mutex;
-
-    friend class BuffersHandler;
 };
 
 #endif

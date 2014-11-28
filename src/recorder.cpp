@@ -35,37 +35,6 @@
 #include "recorder.h"
 #include "logging.h"
 
-
-//class BuffersHandler : public QObject
-//{
-//public:
-//    bool event(QEvent *e) Q_DECL_OVERRIDE
-//    {
-//        IN << e->type() << FrameEvent::FrameEventType;
-//        if (e->type() == FrameEvent::FrameEventType) {
-//            LOG() << "save frame";
-//            FrameEvent *fe = static_cast<FrameEvent *>(e);
-//            Buffer *buf = fe->buffer;
-//            static int id = 0;
-//            QElapsedTimer timer;
-//            timer.start();
-//            QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
-//            buf->busy = false;
-//            if (rec->m_starving)
-//                rec->recordFrame();
-//            int t1 = timer.restart();
-//            img.save(QString("frame%1.bmp").arg(id++, 3, 10, QChar('0')));
-//            qDebug()<<t1<<timer.elapsed();
-//            QMutexLocker lock(&rec->m_mutex);
-//                        qDebug()<<"fe"<<buf<<rec->m_starving<<id;
-//            return true;
-//        }
-//        return QObject::event(e);
-//    }
-
-//    Recorder *rec;
-//};
-
 static void callback(void *data, wl_callback *cb, uint32_t time)
 {
     IN;
@@ -97,22 +66,13 @@ Recorder::Recorder(ScreenToVnc *screenToVnc)
     };
     wl_callback_add_listener(cb, &callbackListener, this);
 
-//    m_buffersThread = new QThread;
-//    m_buffersHandler = new BuffersHandler;
-//    m_buffersHandler->rec = this;
-//    m_buffersHandler->moveToThread(m_buffersThread);
-//    m_buffersThread->start();
     OUT;
 }
 
 Recorder::~Recorder()
 {
     IN;
-//    m_buffersThread->quit();
-//    m_buffersThread->wait();
     lipstick_recorder_destroy(m_lipstickRecorder);
-//    delete m_buffersHandler;
-//    delete m_buffersThread;
 }
 
 void Recorder::start()
@@ -186,7 +146,6 @@ void Recorder::frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer,
     qDebug()<<"frame"<<timestamp - time<<buf;
     time = timestamp;
 
-//    qApp->postEvent(rec->m_buffersHandler, new FrameEvent(buf, timestamp, transform));
     qApp->postEvent(rec->m_screenToVnc, new FrameEvent(buf, timestamp, transform));
 }
 
