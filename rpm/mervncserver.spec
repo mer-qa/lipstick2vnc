@@ -15,6 +15,7 @@ BuildRequires:  libjpeg-turbo-devel
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(Qt5Gui)
+BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  qt5-qtwayland-wayland_egl-devel
 
 
@@ -31,7 +32,7 @@ A VNC server for Mer QA
 
 
 %build
-%qtc_qmake5 CONFIG+=release
+%qtc_qmake5
 %qtc_make %{?_smp_mflags}
 
 
