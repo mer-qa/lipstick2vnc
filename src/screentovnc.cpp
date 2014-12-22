@@ -326,7 +326,7 @@ void ScreenToVnc::rfbProcessTrigger()
         makeEmptyMouse(m_server);
     }
 
-    rfbProcessEvents(m_server,0);
+    rfbProcessEvents(m_server, 5000);
 }
 
 /****************************************************************************

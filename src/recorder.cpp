@@ -93,7 +93,7 @@ void Recorder::start()
     };
     lipstick_recorder_add_listener(m_lipstickRecorder, &recorderListener, this);
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 2; ++i) {
         Buffer *buffer = Buffer::create(m_shm, m_screen);
         if (!buffer)
             qFatal("Failed to create a buffer.");
