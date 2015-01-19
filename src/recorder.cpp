@@ -87,6 +87,7 @@ void Recorder::start()
 
     m_lipstickRecorder = lipstick_recorder_manager_create_recorder(m_manager, output);
     static const lipstick_recorder_listener recorderListener = {
+        setup,
         frame,
         failed,
         cancel
@@ -169,6 +170,17 @@ void Recorder::cancel(void *data, lipstick_recorder *recorder, wl_buffer *buffer
     QMutexLocker lock(&rec->m_mutex);
     Buffer *buf = static_cast<Buffer *>(wl_buffer_get_user_data(buffer));
     buf->busy = false;
+}
+
+void Recorder::setup(void *data, lipstick_recorder *recorder, int width, int height, int stride, int format)
+{
+    IN;
+    Q_UNUSED(data)
+    Q_UNUSED(recorder)
+    Q_UNUSED(width)
+    Q_UNUSED(height)
+    Q_UNUSED(stride)
+    Q_UNUSED(format)
 }
 
 void Recorder::global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version)

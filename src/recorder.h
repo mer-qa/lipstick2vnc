@@ -67,6 +67,7 @@ private:
     static void frame(void *data, lipstick_recorder *recorder, wl_buffer *buffer, uint32_t time, int transform);
     static void failed(void *data, lipstick_recorder *recorder, int result, wl_buffer *buffer);
     static void cancel(void *data, lipstick_recorder *recorder, wl_buffer *buffer);
+    static void setup(void *data, lipstick_recorder *recorder, int width, int height, int stride, int format);
 
     ScreenToVnc *m_screenToVnc;
 
