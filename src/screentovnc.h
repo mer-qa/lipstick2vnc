@@ -78,6 +78,14 @@ static int eventDev;
 static bool exitWhenLastClientGone;
 static bool isEmptyMouse;
 static bool isTypeA;
+static bool hasAbsMtPressure;
+static int mtPressureValue;
+static bool hasAbsMtTrackingId;
+static bool hasAbsMtTouchMajor;
+static bool hasAbsMtWidthMajor;
+static bool hasBntTouch;
+static int mtAbsCorrecturX;
+static int mtAbsCorrecturY;
 
 enum displayState{
     displayOn,
