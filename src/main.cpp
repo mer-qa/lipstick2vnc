@@ -1,12 +1,12 @@
 /****************************************************************************
  *
- *  main.cpp - Mervncserver, a VNC server for Mer devices
+ *  main.cpp - Lipstick2vnc, a VNC server for Mer devices
  *  Copyright (C) 2014 Jolla Ltd.
  *  Contact: Reto Zingg <reto.zingg@jolla.com>
  *
- *  This file is part of Mervncserver.
+ *  This file is part of Lipstick2vnc.
  *
- *  Mervncserver is free software; you can redistribute it and/or modify
+ *  Lipstick2vnc is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.

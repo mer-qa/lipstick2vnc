@@ -3,7 +3,7 @@ QT += core dbus network
 QT += platformsupport-private
 
 TEMPLATE = app
-TARGET = mervncserver
+TARGET = lipstick2vnc
 target.path += /usr/bin
 INSTALLS = target
 

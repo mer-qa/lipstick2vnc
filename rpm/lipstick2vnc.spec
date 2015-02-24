@@ -1,10 +1,10 @@
-Name:           mervncserver
+Name:           lipstick2vnc
 Summary:        A VNC server for Mer QA
 Version:        0.1
 Release:        1
 Group:          System Environment/Daemons
 License:        GPLv2+
-URL:            https://github.com/mer-qa/mervncserver
+URL:            https://github.com/mer-qa/lipstick2vnc
 Source0:        %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5DBus)

@@ -7,7 +7,7 @@ src_fb.target = sub-src
 SUBDIRS = src_fb
 
 OTHER_FILES += \
-    rpm/mervncserver.spec \
+    rpm/lipstick2vnc.spec \
     data/vnc.socket \
     data/vnc.service
 

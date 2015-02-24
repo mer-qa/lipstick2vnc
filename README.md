@@ -4,10 +4,10 @@
 
 * Check out the code (if not done already)
 ```
-git clone https://github.com/mer-qa/mervncserver.git
+git clone https://github.com/mer-qa/lipstick2vnc.git
 ```
 
-* Start the Sailfish OS SDK Qt-Creator and open the file ```mervncserver.pro```
+* Start the Sailfish OS SDK Qt-Creator and open the file ```lipstick2vnc.pro```
 
 * In kit selection make sure you enable **MerSDK-SailfishOS-armv7hl**
 
@@ -47,7 +47,7 @@ systemctl start vnc.socket
 
 Follow log entries in the *systemd* journal, just for the VNC server:
 ```
-journalctl -f -a /usr/bin/mervncserver
+journalctl -f -a /usr/bin/lipstick2vnc
 ```
 
 Verify if the server is running (just running/active when a client is connected):
