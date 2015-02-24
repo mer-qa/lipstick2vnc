@@ -1,6 +1,6 @@
 QT += core dbus network
 # needed for qpa/qplatformnativeinterface.h
-QT += platformsupport-private
+QT += gui-private
 
 TEMPLATE = app
 TARGET = lipstick2vnc
