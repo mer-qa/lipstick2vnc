@@ -32,14 +32,13 @@
 #define STRINGIFY2(z) #z
 
 #define LOG_HEADER() \
-    QDateTime::currentDateTime().toString("hh:mm:ss.zzz ").append(__PRETTY_FUNCTION__).append(":" STRINGIFY(__LINE__))
+    QDateTime::currentDateTime().toString("hh:mm:ss.zzz")
 
 #define LOG() \
     qDebug() << LOG_HEADER()
 
-#define LOGF(fmt, ...) \
-    qDebug("%s:%d " fmt, \
-        __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define PRINT(msg) \
+    QTextStream(stdout) << "lipstick2vnc: " << msg << endl;
 
 #define IN LOG() << "IN"
 #define OUT LOG() << "OUT"
