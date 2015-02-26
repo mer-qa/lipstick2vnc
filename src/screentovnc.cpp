@@ -124,15 +124,14 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
             SLOT(recorderReady()));
 
     m_screen = QGuiApplication::screens().first();
-    LOG() << "m_screen->size().width:" << m_screen->size().width()
-          << "m_screen->size().height():" << m_screen->size().height();
+    PRINT("Screensize found by QGuiApplication::screens: x: " << m_screen->size().width() << " - y: " << m_screen->size().height());
 
     // setup vnc server
     char *argv[0];
     m_server = rfbGetScreen(0,argv, m_screen->size().width(), m_screen->size().height(), 8, 3, m_screen->depth() / 8);
 
     if(!m_server){
-        LOG() << "failed to create VNC server";
+        PRINT("failed to create VNC server");
         m_allFine = false;
     }
 
@@ -170,7 +169,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     // Initialize the VNC server
     rfbInitServer(m_server);
     if (m_server->listenSock < 0){
-        LOG() << "Server is not listening on any sockets! Quit";
+        PRINT("Server is not listening on any sockets! Quit");
         m_allFine = false;
     }
 
@@ -313,6 +312,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
                         }
                     }
 
+                    PRINT("Using '" << fileInfo.absoluteFilePath() << "' as input device.");
                     eventDev = fd;
                     break;
                 }
@@ -444,6 +444,8 @@ void ScreenToVnc::init_fingerPointers()
 void ScreenToVnc::mceUnblank()
 {
     IN;
+    PRINT("request screen unblank from MCE");
+
     QDBusConnection bus = QDBusConnection::systemBus();
     QDBusInterface dbus_iface("com.nokia.mce",
                               "/com/nokia/mce/request",
@@ -457,10 +459,9 @@ void ScreenToVnc::mceBlankHandler(QString state)
 {
     IN;
     LOG() << "state:" << state;
+    PRINT("current screen state is: " << state);
 
     if (state == "off"){
-        LOG();
-
         for (int j=m_screen->size().height()-1;j>=0;j--){
 
             for(int i=m_screen->size().width()-1;i>=0;i--)
@@ -812,6 +813,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         break;
     case 4: /* right button down */
         if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+            PRINT("right mouse button clicked");
             mceUnblank();
         }
         break;
@@ -885,7 +887,7 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
         m_recorder->repaint();
         return RFB_CLIENT_ACCEPT;
     } else {
-        LOG() << "RFB_CLIENT_REFUSE";
+        PRINT("RFB_CLIENT_REFUSE");
         cl->clientGoneHook = clientgone;
         return RFB_CLIENT_REFUSE;
     }
