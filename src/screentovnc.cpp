@@ -77,10 +77,15 @@
 
 Recorder *ScreenToVnc::m_recorder;
 
-ScreenToVnc::ScreenToVnc(QObject *parent) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec) :
     QObject(parent)
 {
     IN;
+    m_smoothScaling = smoothScaling;
+    m_scalingFactor = scalingFactor;
+    LOG() << "scalingFactor:" << scalingFactor;
+    m_usec = usec;
+
     m_allFine = true;
     // TODO: make that configurable?
     exitWhenLastClientGone = false;
@@ -126,9 +131,14 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     m_screen = QGuiApplication::screens().first();
     PRINT("Screensize found by QGuiApplication::screens: x: " << m_screen->size().width() << " - y: " << m_screen->size().height());
 
+    m_screen_width = qRound(m_screen->size().width() * m_scalingFactor);
+    m_screen_height = qRound(m_screen->size().height() * m_scalingFactor);
+
+    PRINT("Scaled screen is x:" << m_screen_width << " - y: " << m_screen_height);
+
     // setup vnc server
     char *argv[0];
-    m_server = rfbGetScreen(0,argv, m_screen->size().width(), m_screen->size().height(), 8, 3, m_screen->depth() / 8);
+    m_server = rfbGetScreen(0,argv, m_screen_width, m_screen_height, 8, 3, m_screen->depth() / 8);
 
     if(!m_server){
         PRINT("failed to create VNC server");
@@ -136,7 +146,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
     }
 
     m_server->desktopName = "Mer VNC";
-    m_server->frameBuffer=(char*)malloc(m_screen->size().width() * m_screen->size().height() * (m_screen->depth() / 8));
+    m_server->frameBuffer=(char*)malloc(m_screen_width * m_screen_height * (m_screen->depth() / 8));
 
     m_server->alwaysShared=(1==1);
 
@@ -241,7 +251,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
                               << "- flat:" << absinfo.flat
                               << "- resolution:" << absinfo.resolution;
 
-                        mtAbsCorrecturX = qRound(QVariant(absinfo.maximum).toFloat() / m_screen->size().width());
+                        mtAbsCorrecturX = (QVariant(absinfo.maximum).toFloat() / m_screen->size().width()) * (1.0 / m_scalingFactor);
                         LOG() << "mtAbsCorrecturX:" << mtAbsCorrecturX;
                     }
 
@@ -253,7 +263,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent) :
                               << "- flat:" << absinfo.flat
                               << "- resolution:" << absinfo.resolution;
 
-                        mtAbsCorrecturY = qRound(QVariant(absinfo.maximum).toFloat() / m_screen->size().height());
+                        mtAbsCorrecturY = (QVariant(absinfo.maximum).toFloat() / m_screen->size().height()) * (1.0 / m_scalingFactor);
                         LOG() << "mtAbsCorrecturY:" << mtAbsCorrecturY;
                     }
 
@@ -374,11 +384,32 @@ bool ScreenToVnc::event(QEvent *e)
         QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
         buf->busy = false;
 
+        LOG() << "img size:" << "x:" << img.width() << "y:" << img.height();
+
         if (m_recorder->m_starving)
             m_recorder->recordFrame();
 
-        memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
-        rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
+        if (m_scalingFactor != 1){
+            int s_x = qRound(img.width() * m_scalingFactor);
+            int s_y = qRound(img.height() * m_scalingFactor);
+            LOG() << "img scaled size:" << "x:" << s_x << "y:" << s_y;
+            LOG() << "img.format:" << img.format();
+
+            LOG() << "start scale image with smooth:" << m_smoothScaling;
+            QImage scaleImg = img.scaled(s_x, s_y, Qt::KeepAspectRatio, m_smoothScaling ? Qt::SmoothTransformation : Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888);
+            LOG() << "end scale image with smooth:" << m_smoothScaling;
+            LOG() << "scaleImg.format:" << scaleImg.format();
+
+            LOG() << "scaleImg.width()" << scaleImg.width() << "scaleImg.height()" << scaleImg.height();
+
+            memcpy(m_server->frameBuffer, scaleImg.bits(), scaleImg.width() * scaleImg.height() * scaleImg.depth() / 8);
+            rfbMarkRectAsModified(m_server, 0, 0, scaleImg.width(), scaleImg.height());
+
+        } else {
+            memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
+            rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
+        }
+
 
         if (m_wasRepaintTimeOut){
             m_wasRepaintTimeOut = false;
@@ -416,7 +447,7 @@ void ScreenToVnc::rfbProcessTrigger()
         makeEmptyMouse(m_server);
     }
 
-    rfbProcessEvents(m_server, 5000);
+    rfbProcessEvents(m_server, m_usec);
 }
 
 /****************************************************************************
@@ -462,16 +493,16 @@ void ScreenToVnc::mceBlankHandler(QString state)
     PRINT("current screen state is: " << state);
 
     if (state == "off"){
-        for (int j=m_screen->size().height()-1;j>=0;j--){
+        for (int j=m_screen_height-1;j>=0;j--){
 
-            for(int i=m_screen->size().width()-1;i>=0;i--)
+            for(int i=m_screen_width-1;i>=0;i--)
                 for(int k=2;k>=0;k--)
-                    m_server->frameBuffer[(j*m_screen->size().width()+i)*4+k]=0;
+                    m_server->frameBuffer[(j*m_screen_width+i)*4+k]=0;
 
-            for(int i=m_screen->size().width()*4;i<m_screen->size().width()*4;i++)
+            for(int i=m_screen_width*4;i<m_screen_width*4;i++)
                 m_server->frameBuffer[j*m_screen->size().width()*4+i]=0;
         }
-        rfbMarkRectAsModified(m_server,0,0,m_screen->size().width() ,m_screen->size().height());
+        rfbMarkRectAsModified(m_server,0,0,m_screen_width,m_screen_height);
     }
 }
 
@@ -687,11 +718,11 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
 
             event_x.type = EV_ABS;
             event_x.code = ABS_MT_POSITION_X;
-            event_x.value = x * mtAbsCorrecturX;
+            event_x.value = qRound(x * mtAbsCorrecturX);
 
             event_y.type = EV_ABS;
             event_y.code = ABS_MT_POSITION_Y;
-            event_y.value = y * mtAbsCorrecturY;
+            event_y.value = qRound(y * mtAbsCorrecturY);
 
             if (hasAbsMtPressure){
                 event_pressure.type = EV_ABS;

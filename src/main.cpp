@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include <QGuiApplication>
+#include <QCommandLineParser>
 
 #include "screentovnc.h"
 #include "logging.h"
@@ -63,6 +64,26 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
+    QCommandLineParser parser;
+
+    QCommandLineOption scaleOption(QStringList() << "s" << "scale", "scale the image before put to vnc fb", "ratio");
+    parser.addOption(scaleOption);
+
+    QCommandLineOption smoothOption(QStringList() << "S" << "smooth", "use smooth Qt option to scale");
+    parser.addOption(smoothOption);
+
+    QCommandLineOption usecOption(QStringList() << "u" << "usec", "usec to wait max for events in VNC library", "usec");
+    parser.addOption(usecOption);
+
+    parser.process(app);
+
+    bool smoothScaling = parser.isSet(smoothOption);
+    int usec = parser.value(usecOption).toInt();
+
+    float scaleFactor = 1;
+    if (parser.isSet(scaleOption))
+        scaleFactor = parser.value(scaleOption).toFloat();
+
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";
         return 1;
@@ -70,7 +91,7 @@ int main(int argc, char *argv[])
 
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
 
-    ScreenToVnc screen2vnc;
+    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;

@@ -84,8 +84,8 @@ static bool hasAbsMtTrackingId;
 static bool hasAbsMtTouchMajor;
 static bool hasAbsMtWidthMajor;
 static bool hasBntTouch;
-static int mtAbsCorrecturX;
-static int mtAbsCorrecturY;
+static float mtAbsCorrecturX;
+static float mtAbsCorrecturY;
 
 enum displayState{
     displayOn,
@@ -96,7 +96,7 @@ class ScreenToVnc : public QObject
 {
     Q_OBJECT
 public:
-    explicit ScreenToVnc(QObject *parent = 0);
+    explicit ScreenToVnc(QObject *parent = 0, bool smoothScaling = false, float scalingFactor = 1, int usec = 5000);
     ~ScreenToVnc();
 
     bool event(QEvent *e) Q_DECL_OVERRIDE;
@@ -152,6 +152,12 @@ private:
     static enum rfbNewClientAction newclient(rfbClientPtr cl);
 
     enum displayState getDisplayStatus();
+
+    bool m_smoothScaling;
+    float m_scalingFactor;
+    int m_usec;
+    int m_screen_height;
+    int m_screen_width;
 };
 
 #endif // SCREENTOVNC_H
