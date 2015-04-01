@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QCommandLineParser parser;
+    parser.addHelpOption();
 
     QCommandLineOption scaleOption(QStringList() << "s" << "scale", "scale the image before put to vnc fb", "ratio");
     parser.addOption(scaleOption);
@@ -77,6 +78,12 @@ int main(int argc, char *argv[])
 
     QCommandLineOption buffersOption(QStringList() << "b" << "buffers", "how many buffers to create", "buffers");
     parser.addOption(buffersOption);
+
+    QCommandLineOption intervalOption(QStringList() << "p" << "processTimerInterval", "In which interval shall the process timer trigger", "processTimerInterval");
+    parser.addOption(intervalOption);
+
+    QCommandLineOption mouseOption(QStringList() << "M" << "no-mouse-handler", "don't handle mouse events from vnc clients");
+    parser.addOption(mouseOption);
 
     parser.process(app);
 
@@ -94,6 +101,15 @@ int main(int argc, char *argv[])
     if (parser.isSet(buffersOption))
         buffers = parser.value(buffersOption).toInt();
 
+    int processTimerInterval = 0;
+    if (parser.isSet(intervalOption))
+        processTimerInterval = parser.value(intervalOption).toInt();
+
+    bool doMouseHandler = true;
+    if (parser.isSet(mouseOption)){
+        doMouseHandler = false;
+    }
+
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";
         return 1;
@@ -101,7 +117,7 @@ int main(int argc, char *argv[])
 
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
 
-    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers);
+    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers, processTimerInterval, doMouseHandler);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;

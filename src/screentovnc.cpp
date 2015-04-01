@@ -77,7 +77,7 @@
 
 Recorder *ScreenToVnc::m_recorder;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
     QObject(parent)
 {
     IN;
@@ -85,6 +85,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     m_scalingFactor = scalingFactor;
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
+    m_doMouseHandling = doMouseHandling;
 
     m_allFine = true;
     // TODO: make that configurable?
@@ -151,7 +152,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     m_server->alwaysShared=(1==1);
 
     m_server->newClientHook = newclient;
-    m_server->ptrAddEvent = mouseHandler;
+
+    if (m_doMouseHandling){
+        m_server->ptrAddEvent = mouseHandler;
+    }
 
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
     int sd_fds = sd_listen_fds(1);
@@ -173,8 +177,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     }
 
     // init the cursors
-    init_fingerPointers();
-    makeRichCursor(m_server);
+    if (m_doMouseHandling){
+        init_fingerPointers();
+        makeRichCursor(m_server);
+    }
 
     // Initialize the VNC server
     rfbInitServer(m_server);
@@ -184,6 +190,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     }
 
     m_processTimer = new QTimer(this);
+    m_processTimer->setInterval(processTimerInterval);
     connect(m_processTimer,
             SIGNAL(timeout()),
             this,
@@ -441,10 +448,12 @@ void ScreenToVnc::rfbProcessTrigger()
 //    long usec;
 //    usec = m_server->deferUpdateTime*1000;
 
-    // TODO: make the 500ms configurable?!
-    qint64 now = QDateTime::currentMSecsSinceEpoch();
-    if (!isEmptyMouse && now - lastPointerMove > 500) {
-        makeEmptyMouse(m_server);
+    if (m_doMouseHandling){
+        // TODO: make the 500ms configurable?!
+        qint64 now = QDateTime::currentMSecsSinceEpoch();
+        if (!isEmptyMouse && now - lastPointerMove > 500) {
+            makeEmptyMouse(m_server);
+        }
     }
 
     rfbProcessEvents(m_server, m_usec);

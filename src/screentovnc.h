@@ -96,7 +96,7 @@ class ScreenToVnc : public QObject
 {
     Q_OBJECT
 public:
-    explicit ScreenToVnc(QObject *parent = 0, bool smoothScaling = false, float scalingFactor = 1, int usec = 5000, int buffers = 2);
+    explicit ScreenToVnc(QObject *parent = 0, bool smoothScaling = false, float scalingFactor = 1, int usec = 5000, int buffers = 2, int processTimerInterval = 0, bool doMouseHandling = true);
     ~ScreenToVnc();
 
     bool event(QEvent *e) Q_DECL_OVERRIDE;
@@ -158,6 +158,7 @@ private:
     int m_usec;
     int m_screen_height;
     int m_screen_width;
+    bool m_doMouseHandling;
 };
 
 #endif // SCREENTOVNC_H
