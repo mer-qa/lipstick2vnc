@@ -43,13 +43,14 @@ static void callback(void *data, wl_callback *cb, uint32_t time)
     QMetaObject::invokeMethod(static_cast<Recorder *>(data), "start");
 }
 
-Recorder::Recorder(ScreenToVnc *screenToVnc)
+Recorder::Recorder(ScreenToVnc *screenToVnc, int amountOfBuffers)
         : QObject()
         , m_manager(Q_NULLPTR)
         , m_starving(false)
 {
     IN;
     m_screenToVnc = screenToVnc;
+    m_amountOfBuffers = amountOfBuffers;
     QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
     m_display = static_cast<wl_display *>(native->nativeResourceForIntegration("display"));
     m_registry = wl_display_get_registry(m_display);
@@ -94,7 +95,7 @@ void Recorder::start()
     };
     lipstick_recorder_add_listener(m_lipstickRecorder, &recorderListener, this);
 
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < m_amountOfBuffers; ++i) {
         Buffer *buffer = Buffer::create(m_shm, m_screen);
         if (!buffer)
             qFatal("Failed to create a buffer.");

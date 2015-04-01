@@ -48,7 +48,7 @@ class Recorder : public QObject
 {
     Q_OBJECT
 public:
-    Recorder(ScreenToVnc *screenToVnc);
+    Recorder(ScreenToVnc *screenToVnc, int amountOfBuffers);
     ~Recorder();
     void recordFrame();
     void repaint();
@@ -79,6 +79,8 @@ private:
     QScreen *m_screen;
     QList<Buffer *> m_buffers;
     QMutex m_mutex;
+
+    int m_amountOfBuffers;
 };
 
 #endif

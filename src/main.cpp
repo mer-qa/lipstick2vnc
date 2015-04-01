@@ -75,14 +75,24 @@ int main(int argc, char *argv[])
     QCommandLineOption usecOption(QStringList() << "u" << "usec", "usec to wait max for events in VNC library", "usec");
     parser.addOption(usecOption);
 
+    QCommandLineOption buffersOption(QStringList() << "b" << "buffers", "how many buffers to create", "buffers");
+    parser.addOption(buffersOption);
+
     parser.process(app);
 
     bool smoothScaling = parser.isSet(smoothOption);
-    int usec = parser.value(usecOption).toInt();
+
+    int usec = 5000;
+    if (parser.isSet(usecOption))
+        usec = parser.value(usecOption).toInt();
 
     float scaleFactor = 1;
     if (parser.isSet(scaleOption))
         scaleFactor = parser.value(scaleOption).toFloat();
+
+    int buffers = 2;
+    if (parser.isSet(buffersOption))
+        buffers = parser.value(buffersOption).toInt();
 
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";
@@ -91,7 +101,7 @@ int main(int argc, char *argv[])
 
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
 
-    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec);
+    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;

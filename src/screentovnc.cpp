@@ -77,7 +77,7 @@
 
 Recorder *ScreenToVnc::m_recorder;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers) :
     QObject(parent)
 {
     IN;
@@ -121,7 +121,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
             this,
             SLOT(qtTermSignalHandler()));
 
-    ScreenToVnc::m_recorder = new Recorder(this);
+    ScreenToVnc::m_recorder = new Recorder(this, buffers);
 
     connect(m_recorder,
             SIGNAL(ready()),
