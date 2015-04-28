@@ -8,9 +8,9 @@ if [ -f /etc/hw-release ]; then
 fi
 
 if [ $ID = "tbj" ]; then
-    OPTS="--no-mouse-handler --smooth --scale 0.5"
+    OPTS="--no-mouse-handler --buffers 2 --smooth --scale 0.5"
 elif [ $ID = "sbj" ]; then
-    OPTS="--no-mouse-handler"
+    OPTS="--no-mouse-handler --buffers 2"
 else
     OPTS=""
 fi
