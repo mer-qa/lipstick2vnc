@@ -35,7 +35,7 @@ A VNC server for Mer QA
 
 
 %build
-%qtc_qmake5
+%qtc_qmake5 CONFIG+=release
 %qtc_make %{?_smp_mflags}
 
 
