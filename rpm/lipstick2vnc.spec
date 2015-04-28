@@ -17,6 +17,9 @@ BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  qt5-qtwayland-wayland_egl-devel
+BuildRequires:  oneshot
+Requires:       oneshot
+%{_oneshot_requires_post}
 
 
 %description
@@ -47,6 +50,8 @@ ln -s ../vnc.socket %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/
 %post
 systemctl daemon-reload
 
+%{_bindir}/add-oneshot 20-lipstick2vnc-configurator
+
 %preun
 systemctl stop vnc.service
 systemctl stop vnc.socket
@@ -57,6 +62,7 @@ systemctl daemon-reload
 %files
 %defattr(-,root,root,-)
 %attr(755, root, privileged) %{_bindir}/%{name}
+%attr(755, root, root) %{_oneshotdir}/20-lipstick2vnc-configurator
 /%{_lib}/systemd/system/vnc.socket
 /%{_lib}/systemd/system/vnc.service
 /%{_lib}/systemd/system/multi-user.target.wants/vnc.socket

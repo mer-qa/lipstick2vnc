@@ -1,0 +1,21 @@
+#!/bin/sh
+
+ID=""
+OPTS=""
+
+if [ -f /etc/hw-release ]; then
+    . /etc/hw-release
+fi
+
+if [ $ID = "tbj" ]; then
+    OPTS="--no-mouse-handler --smooth --scale 0.5"
+elif [ $ID = "sbj" ]; then
+    OPTS="--no-mouse-handler"
+else
+    OPTS=""
+fi
+
+cat<<EOF > /var/lib/environment/nemo/70-lipstick2vnc.conf
+LIPSTICK2VNC_OPTS="$OPTS"
+EOF
+
