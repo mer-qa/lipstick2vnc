@@ -9,6 +9,10 @@ fi
 
 if [ $ID = "tbj" ]; then
     OPTS="--no-mouse-handler --buffers 2 --smooth --scale 0.5"
+    cat<<EOF > /var/lib/environment/compositor/zzz-lipstick2vnc.conf
+LIPSTICK_HARDWARE_COMPOSITOR=0
+EOF
+
 elif [ $ID = "sbj" ]; then
     OPTS="--no-mouse-handler --buffers 2"
 else
