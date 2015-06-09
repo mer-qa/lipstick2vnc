@@ -159,6 +159,7 @@ private:
     int m_screen_height;
     int m_screen_width;
     bool m_doMouseHandling;
+    bool m_isScreenBlank;
 };
 
 #endif // SCREENTOVNC_H

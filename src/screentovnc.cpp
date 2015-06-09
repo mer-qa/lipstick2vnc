@@ -357,6 +357,9 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
 
     if(getDisplayStatus() == displayOff){
         mceBlankHandler("off");
+        m_isScreenBlank = true;
+    } else {
+        m_isScreenBlank = false;
     }
 
     if (m_allFine){
@@ -409,12 +412,16 @@ bool ScreenToVnc::event(QEvent *e)
 
             LOG() << "scaleImg.width()" << scaleImg.width() << "scaleImg.height()" << scaleImg.height();
 
-            memcpy(m_server->frameBuffer, scaleImg.bits(), scaleImg.width() * scaleImg.height() * scaleImg.depth() / 8);
-            rfbMarkRectAsModified(m_server, 0, 0, scaleImg.width(), scaleImg.height());
+            if (!m_isScreenBlank){
+                memcpy(m_server->frameBuffer, scaleImg.bits(), scaleImg.width() * scaleImg.height() * scaleImg.depth() / 8);
+                rfbMarkRectAsModified(m_server, 0, 0, scaleImg.width(), scaleImg.height());
+            }
 
         } else {
-            memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
-            rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
+            if (!m_isScreenBlank){
+                memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
+                rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
+            }
         }
 
 
@@ -502,6 +509,8 @@ void ScreenToVnc::mceBlankHandler(QString state)
     PRINT("current screen state is: " << state);
 
     if (state == "off"){
+        m_isScreenBlank = true;
+
         for (int j=m_screen_height-1;j>=0;j--){
 
             for(int i=m_screen_width-1;i>=0;i--)
@@ -512,6 +521,8 @@ void ScreenToVnc::mceBlankHandler(QString state)
                 m_server->frameBuffer[j*m_screen->size().width()*4+i]=0;
         }
         rfbMarkRectAsModified(m_server,0,0,m_screen_width,m_screen_height);
+    } else {
+        m_isScreenBlank = false;
     }
 }
 
