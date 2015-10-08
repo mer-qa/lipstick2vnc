@@ -136,7 +136,6 @@ private:
     QScreen *m_screen;
 
     QTimer *m_repaintTimer;
-    bool m_wasRepaintTimeOut;
 
     // mouse handling
     static void init_fingerPointers();

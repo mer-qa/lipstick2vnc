@@ -101,8 +101,6 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
             this,
             SLOT(repaintTimeOut()));
 
-    m_wasRepaintTimeOut = false;
-
     // Unix Signal Handling set up
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, unixHupSignalFd))
         qFatal("Couldn't create HUP socketpair");
@@ -424,12 +422,7 @@ bool ScreenToVnc::event(QEvent *e)
             }
         }
 
-
-        if (m_wasRepaintTimeOut){
-            m_wasRepaintTimeOut = false;
-        } else {
-            m_repaintTimer->start();
-        }
+        m_repaintTimer->start();
 
         return true;
     }
@@ -446,7 +439,6 @@ void ScreenToVnc::recorderReady()
 void ScreenToVnc::repaintTimeOut()
 {
     IN;
-    m_wasRepaintTimeOut = true;
     m_recorder->repaint();
 }
 
