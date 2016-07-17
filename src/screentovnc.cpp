@@ -77,7 +77,7 @@
 
 Recorder *ScreenToVnc::m_recorder;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers, int processTimerInterval, bool doMouseHandling, bool allowAllConnections) :
     QObject(parent)
 {
     IN;
@@ -86,6 +86,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
     m_doMouseHandling = doMouseHandling;
+    clientAllowAllConnections = allowAllConnections;
+
+    if (allowAllConnections)
+        LOG() << "Allowing connections from all interfaces";
 
     m_allFine = true;
     // TODO: make that configurable?
@@ -899,6 +903,9 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
     IN;
 
     bool allowConnection = false;
+
+    if (clientAllowAllConnections)
+        allowConnection = true;
 
     // TODO: make that configurable, usb device interface is not always rndis0!
     QNetworkInterface usbIf = QNetworkInterface::interfaceFromName("rndis0");
