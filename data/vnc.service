@@ -3,10 +3,9 @@ Description=VNC Per-Connection Server
 After=syslog.target
 
 [Service]
-User=nemo
 Group=privileged
-Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/100000/dbus/user_bus_socket
-Environment=XDG_RUNTIME_DIR=/run/user/100000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/activeuser/dbus/user_bus_socket
+Environment=XDG_RUNTIME_DIR=/run/activeuser
 # Include common nemo project wide env settings
 EnvironmentFile=-/var/lib/environment/nemo/*.conf
 ExecStart=-/usr/bin/lipstick2vnc $LIPSTICK2VNC_OPTS
