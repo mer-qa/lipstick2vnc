@@ -8,7 +8,7 @@ target.path += /usr/bin
 INSTALLS = target
 
 CONFIG   += link_pkgconfig wayland-scanner
-PKGCONFIG += libvncserver libsystemd-daemon wayland-client
+PKGCONFIG += libvncserver libsystemd wayland-client
 WAYLANDCLIENTSOURCES += protocol/lipstick-recorder.xml
 
 
