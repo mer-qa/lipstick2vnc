@@ -1,8 +1,7 @@
 Name:           lipstick2vnc
-Summary:        A VNC server for Mer QA
+Summary:        A VNC server for Sailfish OS QA
 Version:        0.1
 Release:        1
-Group:          System Environment/Daemons
 License:        GPLv2+
 URL:            https://github.com/mer-qa/lipstick2vnc
 Source0:        %{name}-%{version}.tar.bz2
@@ -24,20 +23,16 @@ Requires:       jolla-sessions-qt5 >= 1.2.7
 
 
 %description
-A VNC server for Mer QA
+A VNC server for Sailfish OS QA
 
-%{!?qtc_qmake:%define qtc_qmake %qmake}
-%{!?qtc_qmake5:%define qtc_qmake5 %qmake5}
-%{!?qtc_make:%define qtc_make make}
-%{?qtc_builddir:%define _builddir %qtc_builddir}
 
 %prep
 %setup -q -n %{name}-%{version}
 
 
 %build
-%qtc_qmake5 CONFIG+=release
-%qtc_make %{?_smp_mflags}
+%qmake5 CONFIG+=release
+make %{?_smp_mflags}
 
 
 %install
@@ -45,8 +40,8 @@ rm -rf %{buildroot}
 %qmake5_install
 
 # systemd integration
-mkdir -p %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/
-ln -s ../vnc.socket %{buildroot}/%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
+mkdir -p %{buildroot}%{_unitdir}/multi-user.target.wants/
+ln -s ../vnc.socket %{buildroot}%{_unitdir}/multi-user.target.wants/vnc.socket
 
 %post
 systemctl daemon-reload
@@ -64,6 +59,6 @@ systemctl daemon-reload
 %defattr(-,root,root,-)
 %attr(755, root, privileged) %{_bindir}/%{name}
 %attr(755, root, root) %{_oneshotdir}/20-lipstick2vnc-configurator
-/%{_lib}/systemd/system/vnc.socket
-/%{_lib}/systemd/system/vnc.service
-/%{_lib}/systemd/system/multi-user.target.wants/vnc.socket
+%{_unitdir}/vnc.socket
+%{_unitdir}/vnc.service
+%{_unitdir}/multi-user.target.wants/vnc.socket
