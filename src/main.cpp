@@ -85,6 +85,9 @@ int main(int argc, char *argv[])
     QCommandLineOption mouseOption(QStringList() << "M" << "no-mouse-handler", "don't handle mouse events from vnc clients");
     parser.addOption(mouseOption);
 
+    QCommandLineOption keyboardOption(QStringList() << "K" << "no-keyboard-handler", "don't handle keyboard events from vnc clients");
+    parser.addOption(keyboardOption);
+
     parser.process(app);
 
     bool smoothScaling = parser.isSet(smoothOption);
@@ -110,6 +113,11 @@ int main(int argc, char *argv[])
         doMouseHandler = false;
     }
 
+    bool doKeyboardHandler = true;
+    if (parser.isSet(keyboardOption)){
+        doKeyboardHandler = false;
+    }
+
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";
         return 1;
@@ -117,7 +125,7 @@ int main(int argc, char *argv[])
 
     setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
 
-    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers, processTimerInterval, doMouseHandler);
+    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers, processTimerInterval, doMouseHandler, doKeyboardHandler);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;

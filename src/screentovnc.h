@@ -86,6 +86,7 @@ static bool hasAbsMtWidthMajor;
 static bool hasBntTouch;
 static float mtAbsCorrecturX;
 static float mtAbsCorrecturY;
+static int uinputKeyboardDeviceFD;
 
 enum displayState{
     displayOn,
@@ -96,7 +97,7 @@ class ScreenToVnc : public QObject
 {
     Q_OBJECT
 public:
-    explicit ScreenToVnc(QObject *parent = 0, bool smoothScaling = false, float scalingFactor = 1, int usec = 5000, int buffers = 2, int processTimerInterval = 0, bool doMouseHandling = true);
+    explicit ScreenToVnc(QObject *parent = 0, bool smoothScaling = false, float scalingFactor = 1, int usec = 5000, int buffers = 2, int processTimerInterval = 0, bool doMouseHandling = true, bool doKeyboardHandling = true);
     ~ScreenToVnc();
 
     bool event(QEvent *e) Q_DECL_OVERRIDE;
@@ -144,7 +145,10 @@ private:
     static void makeRichCursor(rfbScreenInfoPtr rfbScreen);
     static void makeRichCursorTouch(rfbScreenInfoPtr rfbScreen);
     static void updateClientCursors(rfbScreenInfoPtr rfbScreen, bool emptyMouse);
+    static void keyboardHandler(rfbBool down, rfbKeySym k, rfbClientPtr cl);
     static void mouseHandler(int buttonMask,int x,int y,rfbClientPtr cl);
+    static void uinputCreateKeyboardDevice();
+    static void emitKeystroke(int type, int code, int val);
 
     // client handling
     static void clientgone(rfbClientPtr cl);
@@ -158,6 +162,7 @@ private:
     int m_screen_height;
     int m_screen_width;
     bool m_doMouseHandling;
+    bool m_doKeyboardHandling;
     bool m_isScreenBlank;
 };
 
