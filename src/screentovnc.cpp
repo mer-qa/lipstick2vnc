@@ -69,6 +69,9 @@
 
 #include "frameevent.h"
 #include "screentovnc.h"
+#include <linux/uinput.h>
+#include <fcntl.h>
+#include <rfb/keysym.h>
 
 // TODO: make that configurable
 #define POINTER_DELAY 10
@@ -178,6 +181,9 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     if (m_doMouseHandling){
         m_server->ptrAddEvent = mouseHandler;
     }
+
+    uinputCreateKeyboardDevice();
+    m_server->kbdAddEvent = keyboardHandler;
 
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
     int sd_fds = sd_listen_fds(1);
@@ -644,6 +650,59 @@ void ScreenToVnc::updateClientCursors(rfbScreenInfoPtr rfbScreen, bool emptyMous
     rfbReleaseClientIterator(iter);
 
     isEmptyMouse = emptyMouse;
+}
+
+void ScreenToVnc::uinputCreateKeyboardDevice()
+{
+  struct uinput_user_dev uud;
+
+  uinputKeyboardDeviceFD = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+
+  ioctl(uinputKeyboardDeviceFD, UI_SET_EVBIT, EV_KEY);
+  for (int i=0; i < 256; i++) {
+    ioctl(uinputKeyboardDeviceFD, UI_SET_KEYBIT, i);
+  }
+
+
+  memset(&uud, 0, sizeof(uud));
+  snprintf(uud.name, UINPUT_MAX_NAME_SIZE, "uinput old interface");
+  write(uinputKeyboardDeviceFD, &uud, sizeof(uud));
+
+  ioctl(uinputKeyboardDeviceFD, UI_DEV_CREATE);
+}
+
+void ScreenToVnc::emitKeystroke(int type, int code, int val)
+{
+   struct input_event ie;
+
+   ie.type = type;
+   ie.code = code;
+   ie.value = val;
+   /* timestamp values below are ignored */
+   ie.time.tv_sec = 0;
+   ie.time.tv_usec = 0;
+
+   write(uinputKeyboardDeviceFD, &ie, sizeof(ie));
+}
+
+void ScreenToVnc::keyboardHandler(rfbBool isKeyDown, rfbKeySym keySym, rfbClientPtr cl)
+{
+    int keyCode = -1;
+    int shift = 0;
+    switch(keySym){
+    }
+    if(keyCode > 0){
+      if(shift){
+        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 1);
+        emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      }
+      emitKeystroke(EV_KEY, keyCode, isKeyDown);
+      emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      if(shift){
+        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 0);
+        emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      }
+    }
 }
 
 /****************************************************************************
