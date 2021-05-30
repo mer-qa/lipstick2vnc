@@ -81,7 +81,7 @@
 Recorder *ScreenToVnc::m_recorder;
 Orientation ScreenToVnc::m_orientation;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling, bool doKeyboardHandling) :
     QObject(parent)
 {
     IN;
@@ -91,6 +91,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
     m_doMouseHandling = doMouseHandling;
+    m_doKeyboardHandling = doKeyboardHandling;
 
     m_allFine = true;
     // TODO: make that configurable?
@@ -182,8 +183,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
         m_server->ptrAddEvent = mouseHandler;
     }
 
-    uinputCreateKeyboardDevice();
-    m_server->kbdAddEvent = keyboardHandler;
+    if (m_doKeyboardHandling){
+        uinputCreateKeyboardDevice();
+        m_server->kbdAddEvent = keyboardHandler;
+    }
 
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
     int sd_fds = sd_listen_fds(1);
