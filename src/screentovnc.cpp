@@ -78,17 +78,17 @@
 Recorder *ScreenToVnc::m_recorder;
 Orientation ScreenToVnc::m_orientation;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
     QObject(parent)
 {
     IN;
     m_smoothScaling = smoothScaling;
     m_scalingFactor = scalingFactor;
+    m_orientation = orientation;
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
     m_doMouseHandling = doMouseHandling;
 
-    m_orientation = Portrait;
     m_allFine = true;
     // TODO: make that configurable?
     exitWhenLastClientGone = false;
