@@ -625,6 +625,9 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
     lastPointerMove = now;
     int nextClientId = 0;
 
+    int width = cl->screen->width;
+    int height = cl->screen->height;
+
     // TODO: smarter way to dedect if in dragMode or not
     switch (buttonMask){
     case 0: /*all buttons up */
@@ -713,7 +716,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         makeRichCursor(cl->screen);
         break;
     case 1: /* left button down */
-        if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
             struct input_event event_x, event_y, event_pressure, event_mt_report, event_end,
                                event_mt_tracking_id, event_btn_touch, event_mt_touch_major, event_mt_width_major;
             memset(&event_x, 0, sizeof(event_x));
@@ -855,7 +858,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         }
         break;
     case 4: /* right button down */
-        if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
             PRINT("right mouse button clicked");
             mceUnblank();
         }
