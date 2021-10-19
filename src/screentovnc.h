@@ -68,6 +68,13 @@ typedef struct ClientData {
 } ClientData;
 }
 
+enum Orientation {
+  Portrait,
+  Landscape,
+  PortraitInverted,
+  LandscapeInverted
+};
+
 // static vars
 static rfbCursor *emptyMousePtr;
 static rfbCursor *pointerFingerPtr;
@@ -106,6 +113,7 @@ public:
     static void unixTermSignalHandler(int unused);
 
     static Recorder *m_recorder;
+    static Orientation m_orientation;
     bool m_allFine;
 
 signals:
