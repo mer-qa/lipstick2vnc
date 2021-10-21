@@ -17,7 +17,6 @@ BuildRequires:  pkgconfig(Qt5Gui)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  qt5-qtwayland-wayland_egl-devel
 BuildRequires:  oneshot
-BuildRequires:  systemd
 Requires:       oneshot
 Requires:       jolla-sessions-qt5 >= 1.2.7
 %{_oneshot_requires_post}
