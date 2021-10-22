@@ -45,7 +45,7 @@ ln -s ../vnc.socket %{buildroot}%{_unitdir}/multi-user.target.wants/vnc.socket
 
 %post
 systemctl daemon-reload
-
+systemctl restart vnc.service
 %{_bindir}/add-oneshot 20-lipstick2vnc-configurator
 
 %preun
