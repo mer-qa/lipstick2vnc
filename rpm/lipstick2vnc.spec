@@ -44,16 +44,16 @@ mkdir -p %{buildroot}%{_unitdir}/multi-user.target.wants/
 ln -s ../vnc.socket %{buildroot}%{_unitdir}/multi-user.target.wants/vnc.socket
 
 %post
-systemctl daemon-reload
-systemctl restart vnc.service
-%{_bindir}/add-oneshot 20-lipstick2vnc-configurator
+systemctl daemon-reload || :
+systemctl restart vnc.service || :
+%{_bindir}/add-oneshot 20-lipstick2vnc-configurator || :
 
 %preun
-systemctl stop vnc.service
-systemctl stop vnc.socket
+systemctl stop vnc.service || :
+systemctl stop vnc.socket || :
 
 %postun
-systemctl daemon-reload
+systemctl daemon-reload || :
 
 %files
 %defattr(-,root,root,-)
