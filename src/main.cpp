@@ -115,8 +115,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/run/user/100000/dbus/user_bus_socket", 0);
-
     ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers, processTimerInterval, doMouseHandler);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";

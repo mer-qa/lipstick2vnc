@@ -16,7 +16,7 @@ systemd_vnc.files = \
     data/vnc.socket \
     data/vnc.service
 
-systemd_vnc.path = /usr/lib/systemd/system/
+systemd_vnc.path = /usr/lib/systemd/user/
 
 oneshot.files = data/20-lipstick2vnc-configurator
 oneshot.path  = /usr/lib/oneshot.d/

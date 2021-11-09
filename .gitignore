@@ -1,7 +1,13 @@
 *.pro.user*
 *.o
+*.list
 moc_*.cpp
 Makefile
-RPMS/
-src/mervncserver
-documentation.list
+/RPMS/
+/installroot/
+/src/mervncserver
+/src/lipstick2vnc
+/src/qwayland-lipstick-recorder.cpp
+/src/qwayland-lipstick-recorder.h
+/src/wayland-lipstick-recorder-client-protocol.h
+/src/wayland-lipstick-recorder-protocol.c
