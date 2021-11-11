@@ -1,4 +1,6 @@
 # A vncserver for Sailfish devices
+Don't install this package if you care about security. There is no protection in this VNC server.
+
 ## Build in Sailfish OS SDK for an armv7hl device
 * you need libVNCServer in the SDK, follow the instructions in the [libVNCServer README](https://github.com/mer-qa/libvncserver/blob/master/README.md)
 
@@ -23,34 +25,35 @@ There is no authendication! So connections are just accepted from usb network. S
 ## Debug on device
 If you want to run the server in the forground, to follow any output, you need to stop the *systemd* socket listener, see below.
 
-For all these commands you must be user **root**.
+For all these commands you must be user, not **root**.
 
 To verify the *systemd* socket listener is active:
 ```
-systemctl status vnc.socket
+systemctl --user status vnc.socket
 ```
 
 To restart the *systemd* socket listener:
 ```
-systemctl restart vnc.socket
+systemctl --user stop vnc.socket
+systemctl --user start vnc.socket
 ```
 
 To stop the *systemd* socket listener:
 ```
-systemctl stop vnc.socket
+systemctl --user stop vnc.socket
 ```
 
 To start the *systemd* socket listener:
 ```
-systemctl start vnc.socket
+systemctl --user start vnc.socket
 ```
 
-Follow log entries in the *systemd* journal, just for the VNC server:
+Follow log entries in the *systemd* journal, just for the VNC server, run this as **root**:
 ```
 journalctl -f -a /usr/bin/lipstick2vnc
 ```
 
 Verify if the server is running (just running/active when a client is connected):
 ```
-systemctl status vnc.service
+systemctl --user status vnc.service
 ```

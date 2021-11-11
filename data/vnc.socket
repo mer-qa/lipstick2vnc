@@ -4,6 +4,3 @@ Before=vnc.service
 [Socket]
 ListenStream=5900
 Accept=no
-
-[Install]
-WantedBy=sockets.target

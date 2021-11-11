@@ -19,12 +19,15 @@ BuildRequires:  qt5-qtwayland-wayland_egl-devel
 BuildRequires:  oneshot
 Requires:       oneshot
 Requires:       jolla-sessions-qt5 >= 1.2.7
+Requires(pre):  sailfish-setup
 %{_oneshot_requires_post}
 
 
 %description
-A VNC server for Sailfish OS QA
+%{summary}.
 
+Don't install this package if you care about security.
+There is no protection in this VNC server.
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -40,25 +43,30 @@ rm -rf %{buildroot}
 %qmake5_install
 
 # systemd integration
-mkdir -p %{buildroot}%{_unitdir}/multi-user.target.wants/
-ln -s ../vnc.socket %{buildroot}%{_unitdir}/multi-user.target.wants/vnc.socket
+mkdir -p %{buildroot}%{_userunitdir}/sockets.target.wants/
+ln -s ../vnc.socket %{buildroot}%{_userunitdir}/sockets.target.wants/vnc.socket
 
 %post
-systemctl daemon-reload || :
-systemctl restart vnc.service || :
+systemctl-user daemon-reload || :
+systemctl-user stop vnc.service || :
 %{_bindir}/add-oneshot 20-lipstick2vnc-configurator || :
 
 %preun
-systemctl stop vnc.service || :
-systemctl stop vnc.socket || :
+if [ "$1" == 0 ]
+then
+    systemctl-user stop vnc.service vnc.socket || :
+fi
 
 %postun
-systemctl daemon-reload || :
+if [ "$1" == 0 ]
+then
+    systemctl-user daemon-reload || :
+fi
 
 %files
 %defattr(-,root,root,-)
-%attr(755, root, privileged) %{_bindir}/%{name}
+%attr(2755, root, privileged) %{_bindir}/%{name}
 %attr(755, root, root) %{_oneshotdir}/20-lipstick2vnc-configurator
-%{_unitdir}/vnc.socket
-%{_unitdir}/vnc.service
-%{_unitdir}/multi-user.target.wants/vnc.socket
+%{_userunitdir}/vnc.socket
+%{_userunitdir}/vnc.service
+%{_userunitdir}/sockets.target.wants/vnc.socket
