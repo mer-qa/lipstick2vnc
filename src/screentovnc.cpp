@@ -905,6 +905,10 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
 
     QHostAddress remoteAddr = QHostAddress(QString::fromLatin1(cl->host));
 
+    if (remoteAddr.isLoopback()) {
+        allowConnection = true;
+    }
+
     if (remoteAddr.protocol() == QAbstractSocket::IPv6Protocol
         && remoteAddr.toString().startsWith("::ffff:")){
         // this is an IPv4-mapped IPv6 address
