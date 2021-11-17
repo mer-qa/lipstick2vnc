@@ -73,6 +73,18 @@ int main(int argc, char *argv[])
     QCommandLineOption smoothOption(QStringList() << "S" << "smooth", "use smooth Qt option to scale");
     parser.addOption(smoothOption);
 
+    QCommandLineOption portraitOption(QStringList() << "portrait", "do not rotate the view (default)");
+    parser.addOption(portraitOption);
+
+    QCommandLineOption landscapeOption(QStringList() << "l" << "landscape", "rotate the view 90 degrees counter-clockwise");
+    parser.addOption(landscapeOption);
+
+    QCommandLineOption portraitInvertedOption(QStringList() << "portrait-inverted", "rotate the view 180 degrees");
+    parser.addOption(portraitInvertedOption);
+
+    QCommandLineOption landscapeInvertedOption(QStringList() << "landscape-inverted", "rotate the view 90 degrees clockwise");
+    parser.addOption(landscapeInvertedOption);
+
     QCommandLineOption usecOption(QStringList() << "u" << "usec", "usec to wait max for events in VNC library", "usec");
     parser.addOption(usecOption);
 
@@ -110,12 +122,23 @@ int main(int argc, char *argv[])
         doMouseHandler = false;
     }
 
+    Orientation orientation = Portrait;
+    if (parser.isSet(portraitOption)){
+        orientation = Portrait;
+    } else if (parser.isSet(landscapeOption)){
+        orientation = Landscape;
+    } else if (parser.isSet(portraitInvertedOption)){
+        orientation = PortraitInverted;
+    } else if (parser.isSet(landscapeInvertedOption)){
+        orientation = LandscapeInverted;
+    }
+
     if (!configureSignalHandlers()){
         LOG() << "failed to setup Unix Signal Handlers";
         return 1;
     }
 
-    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, usec, buffers, processTimerInterval, doMouseHandler);
+    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, orientation, usec, buffers, processTimerInterval, doMouseHandler);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;

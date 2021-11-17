@@ -76,13 +76,15 @@
 #define test_bit(a, b) (a[b/8] & (1<<(b%8)))
 
 Recorder *ScreenToVnc::m_recorder;
+Orientation ScreenToVnc::m_orientation;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
     QObject(parent)
 {
     IN;
     m_smoothScaling = smoothScaling;
     m_scalingFactor = scalingFactor;
+    m_orientation = orientation;
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
     m_doMouseHandling = doMouseHandling;
@@ -130,8 +132,30 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     m_screen = QGuiApplication::screens().first();
     PRINT("Screensize found by QGuiApplication::screens: x: " << m_screen->size().width() << " - y: " << m_screen->size().height());
 
-    m_screen_width = qRound(m_screen->size().width() * m_scalingFactor);
-    m_screen_height = qRound(m_screen->size().height() * m_scalingFactor);
+    int screenWidth = qRound(m_screen->size().width() * m_scalingFactor);
+    int screenHeight = qRound(m_screen->size().height() * m_scalingFactor);
+
+    switch (m_orientation){
+    case Portrait:
+        m_screen_width = screenWidth;
+        m_screen_height = screenHeight;
+        break;
+    case Landscape:
+        m_screen_width = screenHeight;
+        m_screen_height = screenWidth;
+        break;
+    case PortraitInverted:
+        m_screen_width = screenWidth;
+        m_screen_height = screenHeight;
+        break;
+    case LandscapeInverted:
+        m_screen_width = screenHeight;
+        m_screen_height = screenWidth;
+        break;
+    default:
+        LOG() << "ERROR: invalid orientation";
+        QCoreApplication::exit(1);
+    }
 
     PRINT("Scaled screen is x:" << m_screen_width << " - y: " << m_screen_height);
 
@@ -392,6 +416,24 @@ bool ScreenToVnc::event(QEvent *e)
         QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
         buf->busy = false;
 
+        switch (m_orientation){
+        case Portrait:
+            img = img;
+            break;
+        case Landscape:
+            img = img.transformed(QMatrix().rotate(-90.0));
+            break;
+        case PortraitInverted:
+            img = img.transformed(QMatrix().rotate(180.0));
+            break;
+        case LandscapeInverted:
+            img = img.transformed(QMatrix().rotate(90.0));
+            break;
+        default:
+            LOG() << "ERROR: invalid orientation";
+            QCoreApplication::exit(1);
+        }
+
         LOG() << "img size:" << "x:" << img.width() << "y:" << img.height();
 
         if (m_recorder->m_starving)
@@ -625,6 +667,44 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
     lastPointerMove = now;
     int nextClientId = 0;
 
+    int realX = x;
+    int realY = y;
+    int realWidth = cl->screen->width;
+    int realHeight = cl->screen->height;
+
+    int width;
+    int height;
+
+    switch (m_orientation){
+    case Portrait:
+        width = realWidth;
+        height = realHeight;
+        x = realX;
+        y = realY;
+        break;
+    case Landscape:
+        width = realHeight;
+        height = realWidth;
+        x = realHeight - realY;
+        y = realX;
+        break;
+    case PortraitInverted:
+        width = realWidth;
+        height = realHeight;
+        x = realWidth - realX;
+        y = realHeight - realY;
+        break;
+    case LandscapeInverted:
+        width = realHeight;
+        height = realWidth;
+        x = realY;
+        y = realWidth - realX;
+        break;
+    default:
+        LOG() << "ERROR: invalid orientation";
+        QCoreApplication::exit(1);
+    }
+
     // TODO: smarter way to dedect if in dragMode or not
     switch (buttonMask){
     case 0: /*all buttons up */
@@ -713,7 +793,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         makeRichCursor(cl->screen);
         break;
     case 1: /* left button down */
-        if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
             struct input_event event_x, event_y, event_pressure, event_mt_report, event_end,
                                event_mt_tracking_id, event_btn_touch, event_mt_touch_major, event_mt_width_major;
             memset(&event_x, 0, sizeof(event_x));
@@ -855,7 +935,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         }
         break;
     case 4: /* right button down */
-        if(x>=0 && y>=0 && x< cl->screen->width && y< cl->screen->height && now - lastPointerEvent > POINTER_DELAY) {
+        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
             PRINT("right mouse button clicked");
             mceUnblank();
         }
