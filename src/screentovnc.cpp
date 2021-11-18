@@ -69,6 +69,9 @@
 
 #include "frameevent.h"
 #include "screentovnc.h"
+#include <linux/uinput.h>
+#include <fcntl.h>
+#include <rfb/keysym.h>
 
 // TODO: make that configurable
 #define POINTER_DELAY 10
@@ -78,7 +81,7 @@
 Recorder *ScreenToVnc::m_recorder;
 Orientation ScreenToVnc::m_orientation;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling) :
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling, bool doKeyboardHandling) :
     QObject(parent)
 {
     IN;
@@ -88,6 +91,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     LOG() << "scalingFactor:" << scalingFactor;
     m_usec = usec;
     m_doMouseHandling = doMouseHandling;
+    m_doKeyboardHandling = doKeyboardHandling;
 
     m_allFine = true;
     // TODO: make that configurable?
@@ -177,6 +181,11 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
 
     if (m_doMouseHandling){
         m_server->ptrAddEvent = mouseHandler;
+    }
+
+    if (m_doKeyboardHandling){
+        uinputCreateKeyboardDevice();
+        m_server->kbdAddEvent = keyboardHandler;
     }
 
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
@@ -644,6 +653,181 @@ void ScreenToVnc::updateClientCursors(rfbScreenInfoPtr rfbScreen, bool emptyMous
     rfbReleaseClientIterator(iter);
 
     isEmptyMouse = emptyMouse;
+}
+
+void ScreenToVnc::uinputCreateKeyboardDevice()
+{
+  struct uinput_user_dev uud;
+
+  uinputKeyboardDeviceFD = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+
+  ioctl(uinputKeyboardDeviceFD, UI_SET_EVBIT, EV_KEY);
+  for (int i=0; i < 256; i++) {
+    ioctl(uinputKeyboardDeviceFD, UI_SET_KEYBIT, i);
+  }
+
+
+  memset(&uud, 0, sizeof(uud));
+  snprintf(uud.name, UINPUT_MAX_NAME_SIZE, "uinput old interface");
+  write(uinputKeyboardDeviceFD, &uud, sizeof(uud));
+
+  ioctl(uinputKeyboardDeviceFD, UI_DEV_CREATE);
+}
+
+void ScreenToVnc::emitKeystroke(int type, int code, int val)
+{
+   struct input_event ie;
+
+   ie.type = type;
+   ie.code = code;
+   ie.value = val;
+   /* timestamp values below are ignored */
+   ie.time.tv_sec = 0;
+   ie.time.tv_usec = 0;
+
+   write(uinputKeyboardDeviceFD, &ie, sizeof(ie));
+}
+
+void ScreenToVnc::keyboardHandler(rfbBool isKeyDown, rfbKeySym keySym, rfbClientPtr cl)
+{
+    int keyCode = -1;
+    int shift = 0;
+    switch(keySym){
+      case XK_Return:          keyCode=KEY_ENTER;         shift=0;  break;
+      case XK_Escape:          keyCode=KEY_ESC;           shift=0;  break;
+      case XK_Tab:             keyCode=KEY_TAB;           shift=0;  break;
+      case XK_Caps_Lock:       keyCode=KEY_CAPSLOCK;      shift=0;  break;
+      case XK_F1:              keyCode=KEY_F1;            shift=0;  break;
+      case XK_F2:              keyCode=KEY_F2;            shift=0;  break;
+      case XK_F3:              keyCode=KEY_F3;            shift=0;  break;
+      case XK_F4:              keyCode=KEY_F4;            shift=0;  break;
+      case XK_F5:              keyCode=KEY_F5;            shift=0;  break;
+      case XK_F6:              keyCode=KEY_F6;            shift=0;  break;
+      case XK_F7:              keyCode=KEY_F7;            shift=0;  break;
+      case XK_F8:              keyCode=KEY_F8;            shift=0;  break;
+      case XK_F9:              keyCode=KEY_F9;            shift=0;  break;
+      case XK_F10:             keyCode=KEY_F10;           shift=0;  break;
+      case XK_F11:             keyCode=KEY_F11;           shift=0;  break;
+      case XK_F12:             keyCode=KEY_F12;           shift=0;  break;
+      case XK_Page_Up:         keyCode=KEY_PAGEUP;        shift=0;  break;
+      case XK_Page_Down:       keyCode=KEY_PAGEDOWN;      shift=0;  break;
+      case XK_Home:            keyCode=KEY_HOME;          shift=0;  break;
+      case XK_End:             keyCode=KEY_END;           shift=0;  break;
+      case XK_Insert:          keyCode=KEY_INSERT;        shift=0;  break;
+      case XK_Delete:          keyCode=KEY_DELETE;        shift=0;  break;
+      case XK_Left:            keyCode=KEY_LEFT;          shift=0;  break;
+      case XK_Right:           keyCode=KEY_RIGHT;         shift=0;  break;
+      case XK_Up:              keyCode=KEY_UP;            shift=0;  break;
+      case XK_Down:            keyCode=KEY_DOWN;          shift=0;  break;
+      case XK_BackSpace:       keyCode=KEY_BACKSPACE;     shift=0;  break;
+      case XK_space:           keyCode=KEY_SPACE;         shift=0;  break;
+      case XK_exclam:          keyCode=KEY_1;             shift=1;  break;
+      case XK_quotedbl:        keyCode=KEY_APOSTROPHE;    shift=1;  break;
+      case XK_numbersign:      keyCode=KEY_3;             shift=1;  break;
+      case XK_dollar:          keyCode=KEY_4;             shift=1;  break;
+      case XK_percent:         keyCode=KEY_5;             shift=1;  break;
+      case XK_ampersand:       keyCode=KEY_7;             shift=1;  break;
+      case XK_apostrophe:      keyCode=KEY_APOSTROPHE;    shift=0;  break;
+      case XK_parenleft:       keyCode=KEY_9;             shift=1;  break;
+      case XK_parenright:      keyCode=KEY_0;             shift=1;  break;
+      case XK_asterisk:        keyCode=KEY_8;             shift=1;  break;
+      case XK_plus:            keyCode=KEY_EQUAL;         shift=1;  break;
+      case XK_comma:           keyCode=KEY_COMMA;         shift=0;  break;
+      case XK_minus:           keyCode=KEY_MINUS;         shift=0;  break;
+      case XK_period:          keyCode=KEY_DOT;           shift=0;  break;
+      case XK_slash:           keyCode=KEY_SLASH;         shift=0;  break;
+      case XK_0:               keyCode=KEY_0;             shift=0;  break;
+      case XK_1:               keyCode=KEY_1;             shift=0;  break;
+      case XK_2:               keyCode=KEY_2;             shift=0;  break;
+      case XK_3:               keyCode=KEY_3;             shift=0;  break;
+      case XK_4:               keyCode=KEY_4;             shift=0;  break;
+      case XK_5:               keyCode=KEY_5;             shift=0;  break;
+      case XK_6:               keyCode=KEY_6;             shift=0;  break;
+      case XK_7:               keyCode=KEY_7;             shift=0;  break;
+      case XK_8:               keyCode=KEY_8;             shift=0;  break;
+      case XK_9:               keyCode=KEY_9;             shift=0;  break;
+      case XK_colon:           keyCode=KEY_SEMICOLON;     shift=1;  break;
+      case XK_semicolon:       keyCode=KEY_SEMICOLON;     shift=0;  break;
+      case XK_less:            keyCode=KEY_COMMA;         shift=1;  break;
+      case XK_equal:           keyCode=KEY_EQUAL;         shift=0;  break;
+      case XK_greater:         keyCode=KEY_DOT;           shift=1;  break;
+      case XK_question:        keyCode=KEY_SLASH;         shift=1;  break;
+      case XK_at:              keyCode=KEY_2;             shift=1;  break;
+      case XK_A:               keyCode=KEY_A;             shift=1;  break;
+      case XK_B:               keyCode=KEY_B;             shift=1;  break;
+      case XK_C:               keyCode=KEY_C;             shift=1;  break;
+      case XK_D:               keyCode=KEY_D;             shift=1;  break;
+      case XK_E:               keyCode=KEY_E;             shift=1;  break;
+      case XK_F:               keyCode=KEY_F;             shift=1;  break;
+      case XK_G:               keyCode=KEY_G;             shift=1;  break;
+      case XK_H:               keyCode=KEY_H;             shift=1;  break;
+      case XK_I:               keyCode=KEY_I;             shift=1;  break;
+      case XK_J:               keyCode=KEY_J;             shift=1;  break;
+      case XK_K:               keyCode=KEY_K;             shift=1;  break;
+      case XK_L:               keyCode=KEY_L;             shift=1;  break;
+      case XK_M:               keyCode=KEY_M;             shift=1;  break;
+      case XK_N:               keyCode=KEY_N;             shift=1;  break;
+      case XK_O:               keyCode=KEY_O;             shift=1;  break;
+      case XK_P:               keyCode=KEY_P;             shift=1;  break;
+      case XK_Q:               keyCode=KEY_Q;             shift=1;  break;
+      case XK_R:               keyCode=KEY_R;             shift=1;  break;
+      case XK_S:               keyCode=KEY_S;             shift=1;  break;
+      case XK_T:               keyCode=KEY_T;             shift=1;  break;
+      case XK_U:               keyCode=KEY_U;             shift=1;  break;
+      case XK_V:               keyCode=KEY_V;             shift=1;  break;
+      case XK_W:               keyCode=KEY_W;             shift=1;  break;
+      case XK_X:               keyCode=KEY_X;             shift=1;  break;
+      case XK_Y:               keyCode=KEY_Y;             shift=1;  break;
+      case XK_Z:               keyCode=KEY_Z;             shift=1;  break;
+      case XK_bracketleft:     keyCode=KEY_LEFTBRACE;     shift=0;  break;
+      case XK_backslash:       keyCode=KEY_BACKSLASH;     shift=0;  break;
+      case XK_bracketright:    keyCode=KEY_RIGHTBRACE;    shift=0;  break;
+      case XK_asciicircum:     keyCode=KEY_6;             shift=1;  break;
+      case XK_underscore:      keyCode=KEY_MINUS;         shift=1;  break;
+      case XK_grave:           keyCode=KEY_GRAVE;         shift=0;  break;
+      case XK_a:               keyCode=KEY_A;             shift=0;  break;
+      case XK_b:               keyCode=KEY_B;             shift=0;  break;
+      case XK_c:               keyCode=KEY_C;             shift=0;  break;
+      case XK_d:               keyCode=KEY_D;             shift=0;  break;
+      case XK_e:               keyCode=KEY_E;             shift=0;  break;
+      case XK_f:               keyCode=KEY_F;             shift=0;  break;
+      case XK_g:               keyCode=KEY_G;             shift=0;  break;
+      case XK_h:               keyCode=KEY_H;             shift=0;  break;
+      case XK_i:               keyCode=KEY_I;             shift=0;  break;
+      case XK_j:               keyCode=KEY_J;             shift=0;  break;
+      case XK_k:               keyCode=KEY_K;             shift=0;  break;
+      case XK_l:               keyCode=KEY_L;             shift=0;  break;
+      case XK_m:               keyCode=KEY_M;             shift=0;  break;
+      case XK_n:               keyCode=KEY_N;             shift=0;  break;
+      case XK_o:               keyCode=KEY_O;             shift=0;  break;
+      case XK_p:               keyCode=KEY_P;             shift=0;  break;
+      case XK_q:               keyCode=KEY_Q;             shift=0;  break;
+      case XK_r:               keyCode=KEY_R;             shift=0;  break;
+      case XK_s:               keyCode=KEY_S;             shift=0;  break;
+      case XK_t:               keyCode=KEY_T;             shift=0;  break;
+      case XK_u:               keyCode=KEY_U;             shift=0;  break;
+      case XK_v:               keyCode=KEY_V;             shift=0;  break;
+      case XK_w:               keyCode=KEY_W;             shift=0;  break;
+      case XK_x:               keyCode=KEY_X;             shift=0;  break;
+      case XK_y:               keyCode=KEY_Y;             shift=0;  break;
+      case XK_z:               keyCode=KEY_Z;             shift=0;  break;
+      case XK_braceleft:       keyCode=KEY_LEFTBRACE;     shift=1;  break;
+      case XK_bar:             keyCode=KEY_BACKSLASH;     shift=1;  break;
+      case XK_braceright:      keyCode=KEY_RIGHTBRACE;    shift=1;  break;
+      case XK_asciitilde:      keyCode=KEY_GRAVE;         shift=1;  break;
+    }
+    if(keyCode > 0){
+      if(shift){
+        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 1);
+        emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      }
+      emitKeystroke(EV_KEY, keyCode, isKeyDown);
+      emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      if(shift){
+        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 0);
+        emitKeystroke(EV_SYN, SYN_REPORT, 0);
+      }
+    }
 }
 
 /****************************************************************************
