@@ -47,9 +47,6 @@
 
 #include "recorder.h"
 #include "logging.h"
-#include "empty_mouse.h"
-#include "pointer_finger.h"
-#include "pointer_finger_touch.h"
 #include "buffer.h"
 #include "frameevent.h"
 

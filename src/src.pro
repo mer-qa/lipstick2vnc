@@ -23,9 +23,6 @@ SOURCES += \
 HEADERS += \
     screentovnc.h \
     logging.h \
-    pointer_finger.h \
-    pointer_finger_touch.h \
-    empty_mouse.h \
     recorder.h \
     frameevent.h \
     buffer.h
