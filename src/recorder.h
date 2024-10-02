@@ -50,6 +50,7 @@ class Recorder : public QObject
 public:
     Recorder(ScreenToVnc *screenToVnc, int amountOfBuffers);
     ~Recorder();
+
     void recordFrame();
     void repaint();
 

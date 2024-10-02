@@ -44,9 +44,9 @@ static void callback(void *data, wl_callback *cb, uint32_t time)
 }
 
 Recorder::Recorder(ScreenToVnc *screenToVnc, int amountOfBuffers)
-        : QObject()
-        , m_manager(Q_NULLPTR)
-        , m_starving(false)
+    : QObject()
+    , m_starving(false)
+    , m_manager(nullptr)
 {
     IN;
     m_screenToVnc = screenToVnc;

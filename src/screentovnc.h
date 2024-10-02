@@ -66,42 +66,19 @@ typedef struct ClientData {
 }
 
 typedef struct cursor_info {
-  unsigned int   width;
-  unsigned int   height;
-  unsigned int   bytes_per_pixel;
-  std::vector<unsigned char> pixel_data;
-  char*          bitmask;
+    unsigned int   width;
+    unsigned int   height;
+    unsigned int   bytes_per_pixel;
+    std::vector<unsigned char> pixel_data;
+    char*          bitmask;
 } cursor_info;
 
 enum Orientation {
-  Portrait,
-  Landscape,
-  PortraitInverted,
-  LandscapeInverted
+    Portrait,
+    Landscape,
+    PortraitInverted,
+    LandscapeInverted
 };
-
-// static vars
-static rfbCursor *emptyMousePtr;
-static rfbCursor *pointerFingerPtr;
-static rfbCursor *pointerFingerTouchPtr;
-static cursor_info emptyMouseCursorInfo;
-static cursor_info pointerCursorInfo;
-static cursor_info pointerTouchCursorInfo;
-static qint64 lastPointerEvent;
-static qint64 lastPointerMove;
-static int eventDev;
-static bool exitWhenLastClientGone;
-static bool isEmptyMouse;
-static bool isTypeA;
-static bool hasAbsMtPressure;
-static int mtPressureValue;
-static bool hasAbsMtTrackingId;
-static bool hasAbsMtTouchMajor;
-static bool hasAbsMtWidthMajor;
-static bool hasBntTouch;
-static float mtAbsCorrecturX;
-static float mtAbsCorrecturY;
-static int uinputKeyboardDeviceFD;
 
 enum displayState{
     displayOn,
