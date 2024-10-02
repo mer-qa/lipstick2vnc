@@ -410,6 +410,9 @@ ScreenToVnc::~ScreenToVnc()
     IN;
     close(eventDev);
     free(m_server->frameBuffer);
+    free(emptyMouseCursorInfo.bitmask);
+    free(pointerCursorInfo.bitmask);
+    free(pointerTouchCursorInfo.bitmask);
     rfbScreenCleanup(m_server);
     OUT;
 }
@@ -515,20 +518,79 @@ void ScreenToVnc::rfbProcessTrigger()
 
 void ScreenToVnc::init_fingerPointers()
 {
-    pointerFingerPtr = rfbMakeXCursor(pointer_finger.width,
-                                      pointer_finger.height,
-                                      pointer_finger.bitmask,
-                                      pointer_finger.bitmask);
+    emptyMouseCursorInfo = ScreenToVnc::load_cursor_info_from_png(
+        "/usr/share/lipstick2vnc/cursor_empty.png");
+    pointerCursorInfo = ScreenToVnc::load_cursor_info_from_png(
+        "/usr/share/lipstick2vnc/cursor_pointer.png");
+    pointerTouchCursorInfo = ScreenToVnc::load_cursor_info_from_png(
+        "/usr/share/lipstick2vnc/cursor_pointer_touch.png");
 
-    pointerFingerTouchPtr = rfbMakeXCursor(pointer_finger_touch.width,
-                                           pointer_finger_touch.height,
-                                           pointer_finger_touch.bitmask,
-                                           pointer_finger_touch.bitmask);
+    pointerFingerPtr = rfbMakeXCursor(pointerCursorInfo.width,
+        pointerCursorInfo.height,
+        pointerCursorInfo.bitmask,
+        pointerCursorInfo.bitmask);
 
-    emptyMousePtr = rfbMakeXCursor(empty_mouse.width,
-                                   empty_mouse.height,
-                                   empty_mouse.bitmask,
-                                   empty_mouse.bitmask);
+    pointerFingerTouchPtr = rfbMakeXCursor(pointerTouchCursorInfo.width,
+        pointerTouchCursorInfo.height,
+        pointerTouchCursorInfo.bitmask,
+        pointerTouchCursorInfo.bitmask);
+
+    emptyMousePtr = rfbMakeXCursor(emptyMouseCursorInfo.width,
+        emptyMouseCursorInfo.height,
+        emptyMouseCursorInfo.bitmask,
+        emptyMouseCursorInfo.bitmask);
+}
+
+
+cursor_info ScreenToVnc::load_cursor_info_from_png(const char* filename)
+{
+    cursor_info info;
+    std::vector<unsigned char> png;
+    unsigned long width;
+    unsigned long height;
+
+    int bpp = 4;
+
+    QImage pngImg = QImage(filename);
+    width = pngImg.width();
+    height = pngImg.height();
+
+    png.reserve(bpp * width * height);
+
+    for(int y=0; y<height; y++){
+      QRgb *pxRow = (QRgb*) pngImg.scanLine(y);
+      for(int x=0; x<width; x++) {
+          QRgb &px = pxRow[x];
+          png.push_back(qRed(px));
+          png.push_back(qGreen(px));
+          png.push_back(qBlue(px));
+          png.push_back(qAlpha(px));
+      }
+    }
+
+    info.width = width;
+    info.height = height;
+    info.pixel_data = png;
+    info.bitmask = (char*) malloc(sizeof(char) * width * height + 1);
+
+    for(int y=0; y<height; y++){
+        for(int x=0; x<width; x++) {
+            int px = y*width*bpp + x*bpp;
+            unsigned char alpha = png[px + 3];
+            if(alpha > 1){
+                //skip pixels with alpha <= 1 instead of alpha = 0
+                //  original png pointer files have a
+                //  few bright white near-transparent pixels with alpha=1
+                info.bitmask[y*width + x] = 'x';
+            } else {
+                info.bitmask[y*width + x] = ' ';
+            }
+        }
+    }
+    info.bitmask[width * height + 1] = '\0';
+    info.pixel_data[width * height * bpp + 1] = '\0';
+
+    return info;
 }
 
 void ScreenToVnc::mceUnblank()
@@ -611,7 +673,7 @@ enum displayState ScreenToVnc::getDisplayStatus()
 void ScreenToVnc::makeEmptyMouse(rfbScreenInfoPtr rfbScreen)
 {
     rfbScreen->cursor = emptyMousePtr;
-    rfbScreen->cursor->richSource = empty_mouse.pixel_data;
+    rfbScreen->cursor->richSource = emptyMouseCursorInfo.pixel_data.data();
 
     rfbScreen->cursor->xhot = 1;
     rfbScreen->cursor->yhot = 1;
@@ -622,7 +684,7 @@ void ScreenToVnc::makeEmptyMouse(rfbScreenInfoPtr rfbScreen)
 void ScreenToVnc::makeRichCursor(rfbScreenInfoPtr rfbScreen)
 {
     rfbScreen->cursor = pointerFingerPtr;
-    rfbScreen->cursor->richSource = pointer_finger.pixel_data;
+    rfbScreen->cursor->richSource = pointerCursorInfo.pixel_data.data();
 
     rfbScreen->cursor->xhot = 32;
     rfbScreen->cursor->yhot = 32;
@@ -633,7 +695,7 @@ void ScreenToVnc::makeRichCursor(rfbScreenInfoPtr rfbScreen)
 void ScreenToVnc::makeRichCursorTouch(rfbScreenInfoPtr rfbScreen)
 {
     rfbScreen->cursor = pointerFingerTouchPtr;
-    rfbScreen->cursor->richSource = pointer_finger_touch.pixel_data;
+    rfbScreen->cursor->richSource = pointerTouchCursorInfo.pixel_data.data();
 
     rfbScreen->cursor->xhot = 32;
     rfbScreen->cursor->yhot = 32;

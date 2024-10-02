@@ -47,9 +47,6 @@
 
 #include "recorder.h"
 #include "logging.h"
-#include "empty_mouse.h"
-#include "pointer_finger.h"
-#include "pointer_finger_touch.h"
 #include "buffer.h"
 #include "frameevent.h"
 
@@ -68,6 +65,14 @@ typedef struct ClientData {
 } ClientData;
 }
 
+typedef struct cursor_info {
+  unsigned int   width;
+  unsigned int   height;
+  unsigned int   bytes_per_pixel;
+  std::vector<unsigned char> pixel_data;
+  char*          bitmask;
+} cursor_info;
+
 enum Orientation {
   Portrait,
   Landscape,
@@ -79,6 +84,9 @@ enum Orientation {
 static rfbCursor *emptyMousePtr;
 static rfbCursor *pointerFingerPtr;
 static rfbCursor *pointerFingerTouchPtr;
+static cursor_info emptyMouseCursorInfo;
+static cursor_info pointerCursorInfo;
+static cursor_info pointerTouchCursorInfo;
 static qint64 lastPointerEvent;
 static qint64 lastPointerMove;
 static int eventDev;
@@ -148,6 +156,7 @@ private:
 
     // mouse handling
     static void init_fingerPointers();
+    static cursor_info load_cursor_info_from_png(const char* fname);
     static void mceUnblank();
     static void makeEmptyMouse(rfbScreenInfoPtr rfbScreen);
     static void makeRichCursor(rfbScreenInfoPtr rfbScreen);
