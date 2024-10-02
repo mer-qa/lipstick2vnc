@@ -78,11 +78,35 @@
 
 #define test_bit(a, b) (a[b/8] & (1<<(b%8)))
 
+// static vars
+static rfbCursor *emptyMousePtr;
+static rfbCursor *pointerFingerPtr;
+static rfbCursor *pointerFingerTouchPtr;
+static cursor_info emptyMouseCursorInfo;
+static cursor_info pointerCursorInfo;
+static cursor_info pointerTouchCursorInfo;
+static qint64 lastPointerEvent;
+static qint64 lastPointerMove;
+static int eventDev;
+static bool exitWhenLastClientGone;
+static bool isEmptyMouse;
+static bool isTypeA;
+static bool hasAbsMtPressure;
+static int mtPressureValue;
+static bool hasAbsMtTrackingId;
+static bool hasAbsMtTouchMajor;
+static bool hasAbsMtWidthMajor;
+static bool hasBntTouch;
+static float mtAbsCorrecturX;
+static float mtAbsCorrecturY;
+static int uinputKeyboardDeviceFD;
+
 Recorder *ScreenToVnc::m_recorder;
 Orientation ScreenToVnc::m_orientation;
 
-ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation, int usec, int buffers, int processTimerInterval, bool doMouseHandling, bool doKeyboardHandling) :
-    QObject(parent)
+ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFactor, Orientation orientation,
+                         int usec, int buffers, int processTimerInterval, bool doMouseHandling, bool doKeyboardHandling)
+    : QObject(parent)
 {
     IN;
     m_smoothScaling = smoothScaling;
@@ -139,7 +163,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     int screenWidth = qRound(m_screen->size().width() * m_scalingFactor);
     int screenHeight = qRound(m_screen->size().height() * m_scalingFactor);
 
-    switch (m_orientation){
+    switch (m_orientation) {
     case Portrait:
         m_screen_width = screenWidth;
         m_screen_height = screenHeight;
@@ -165,9 +189,9 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
 
     // setup vnc server
     char *argv[0];
-    m_server = rfbGetScreen(0,argv, m_screen_width, m_screen_height, 8, 3, m_screen->depth() / 8);
+    m_server = rfbGetScreen(0, argv, m_screen_width, m_screen_height, 8, 3, m_screen->depth() / 8);
 
-    if(!m_server){
+    if (!m_server) {
         PRINT("failed to create VNC server");
         m_allFine = false;
     }
@@ -175,25 +199,25 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     m_server->desktopName = "Mer VNC";
     m_server->frameBuffer=(char*)malloc(m_screen_width * m_screen_height * (m_screen->depth() / 8));
 
-    m_server->alwaysShared=(1==1);
+    m_server->alwaysShared = (1==1);
 
     m_server->newClientHook = newclient;
 
-    if (m_doMouseHandling){
+    if (m_doMouseHandling) {
         m_server->ptrAddEvent = mouseHandler;
     }
 
-    if (m_doKeyboardHandling){
+    if (m_doKeyboardHandling) {
         uinputCreateKeyboardDevice();
         m_server->kbdAddEvent = keyboardHandler;
     }
 
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
     int sd_fds = sd_listen_fds(1);
-    if (sd_fds){
-        for (int i = SD_LISTEN_FDS_START; i <= (SD_LISTEN_FDS_START + sd_fds - 1); i++){
+    if (sd_fds) {
+        for (int i = SD_LISTEN_FDS_START; i < (SD_LISTEN_FDS_START + sd_fds); i++) {
             if (sd_is_socket(i, AF_INET6, SOCK_STREAM, 1)
-                || sd_is_socket(i, AF_INET, SOCK_STREAM, 1)){
+                || sd_is_socket(i, AF_INET, SOCK_STREAM, 1)) {
                 LOG() << "using given socket at FD:" << i;
                 m_server->autoPort = false;
                 m_server->port = 0;
@@ -208,14 +232,14 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     }
 
     // init the cursors
-    if (m_doMouseHandling){
+    if (m_doMouseHandling) {
         init_fingerPointers();
         makeRichCursor(m_server);
     }
 
     // Initialize the VNC server
     rfbInitServer(m_server);
-    if (m_server->listenSock < 0){
+    if (m_server->listenSock < 0) {
         PRINT("Server is not listening on any sockets! Quit");
         m_allFine = false;
     }
@@ -253,15 +277,15 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
         LOG() << "probe:" << fileInfo.absoluteFilePath();
 
         int fd = open(fileInfo.absoluteFilePath().toLocal8Bit().data(), O_RDWR);
-        if(fd < 0) {
+        if (fd < 0) {
             LOG() << "can't open:" << fileInfo.absoluteFilePath();
         } else {
             char name[64];
-            if (ioctl(fd, EVIOCGNAME(sizeof (name)), name) != -1){
+            if (ioctl(fd, EVIOCGNAME(sizeof (name)), name) != -1) {
                 LOG() << "Device name:" << name;
             }
             input_id device_id;
-            if (ioctl(fd, EVIOCGID, &device_id) != -1){
+            if (ioctl(fd, EVIOCGID, &device_id) != -1) {
                 LOG() << "Vendor:" << device_id.vendor;
                 LOG() << "Product:" << device_id.product;
                 LOG() << "Version:" << device_id.version;
@@ -272,16 +296,16 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
             memset(abscaps, '\0', sizeof (abscaps));
             memset(keycaps, '\0', sizeof (keycaps));
 
-            if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof (abscaps)), abscaps) != -1){
+            if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof (abscaps)), abscaps) != -1) {
                 if (test_bit(abscaps, ABS_MT_POSITION_X)
-                    && test_bit(abscaps, ABS_MT_POSITION_Y)){
+                    && test_bit(abscaps, ABS_MT_POSITION_Y)) {
 
                     LOG() << fileInfo.absoluteFilePath() << "looks right for a touchscreen type A";
                     isTypeA = true;
 
                     struct input_absinfo absinfo;
 
-                    if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) != -1){
+                    if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &absinfo) != -1) {
                         LOG() << "ABS_MT_POSITION_X: value:" << absinfo.value
                               << "- minimum:" << absinfo.minimum
                               << "- maximum:" << absinfo.maximum
@@ -293,7 +317,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
                         LOG() << "mtAbsCorrecturX:" << mtAbsCorrecturX;
                     }
 
-                    if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) != -1){
+                    if (ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &absinfo) != -1) {
                         LOG() << "ABS_MT_POSITION_Y: value:" << absinfo.value
                               << "- minimum:" << absinfo.minimum
                               << "- maximum:" << absinfo.maximum
@@ -305,10 +329,10 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
                         LOG() << "mtAbsCorrecturY:" << mtAbsCorrecturY;
                     }
 
-                    if (test_bit(abscaps, ABS_MT_PRESSURE)){
+                    if (test_bit(abscaps, ABS_MT_PRESSURE)) {
                         LOG() << "ABS_MT_PRESSURE";
                         hasAbsMtPressure = true;
-                        if (ioctl(fd, EVIOCGABS(ABS_MT_PRESSURE), &absinfo) != -1){
+                        if (ioctl(fd, EVIOCGABS(ABS_MT_PRESSURE), &absinfo) != -1) {
                             LOG() << "ABS_PRESSURE: value:" << absinfo.value
                                   << "- minimum:" << absinfo.minimum
                                   << "- maximum:" << absinfo.maximum
@@ -325,34 +349,34 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
                         mtPressureValue = 0;
                     }
 
-                    if (test_bit(abscaps, ABS_MT_TRACKING_ID)){
+                    if (test_bit(abscaps, ABS_MT_TRACKING_ID)) {
                         LOG() << "ABS_MT_TRACKING_ID";
                         hasAbsMtTrackingId = true;
                     } else {
                         hasAbsMtTrackingId = false;
                     }
 
-                    if (test_bit(abscaps, ABS_MT_TOUCH_MAJOR)){
+                    if (test_bit(abscaps, ABS_MT_TOUCH_MAJOR)) {
                         LOG() << "ABS_MT_TOUCH_MAJOR";
                         hasAbsMtTouchMajor = true;
                     } else {
                         hasAbsMtTouchMajor = false;
                     }
 
-                    if (test_bit(abscaps, ABS_MT_WIDTH_MAJOR)){
+                    if (test_bit(abscaps, ABS_MT_WIDTH_MAJOR)) {
                         LOG() << "ABS_MT_WIDTH_MAJOR";
                         hasAbsMtWidthMajor = true;
                     } else {
                         hasAbsMtWidthMajor = false;
                     }
 
-                    if (test_bit(abscaps, ABS_MT_SLOT)){
+                    if (test_bit(abscaps, ABS_MT_SLOT)) {
                         LOG() << "OK seems to be touchscreen type B";
                         isTypeA = false;
                     }
 
-                    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof (keycaps)), keycaps) != -1){
-                        if (test_bit(keycaps, BTN_TOUCH)){
+                    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof (keycaps)), keycaps) != -1) {
+                        if (test_bit(keycaps, BTN_TOUCH)) {
                             LOG() << "EV_KEY has BTN_TOUCH";
                             hasBntTouch = true;
                         } else {
@@ -368,7 +392,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
         }
         close(fd);
     }
-    if (eventDev < 0){
+    if (eventDev < 0) {
         m_allFine = false;
     }
 
@@ -386,14 +410,14 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
                                       this,
                                       SLOT(mceBlankHandler(QString)));
 
-    if(getDisplayStatus() == displayOff){
+    if (getDisplayStatus() == displayOff) {
         mceBlankHandler("off");
         m_isScreenBlank = true;
     } else {
         m_isScreenBlank = false;
     }
 
-    if (m_allFine){
+    if (m_allFine) {
         // inform systemd that we started up
         sd_notifyf(0,
                    "READY=1\n"
@@ -428,7 +452,7 @@ bool ScreenToVnc::event(QEvent *e)
         QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
         buf->busy = false;
 
-        switch (m_orientation){
+        switch (m_orientation) {
         case Portrait:
             img = img;
             break;
@@ -451,7 +475,7 @@ bool ScreenToVnc::event(QEvent *e)
         if (m_recorder->m_starving)
             m_recorder->recordFrame();
 
-        if (m_scalingFactor != 1){
+        if (m_scalingFactor != 1) {
             int s_x = qRound(img.width() * m_scalingFactor);
             int s_y = qRound(img.height() * m_scalingFactor);
             LOG() << "img scaled size:" << "x:" << s_x << "y:" << s_y;
@@ -464,13 +488,13 @@ bool ScreenToVnc::event(QEvent *e)
 
             LOG() << "scaleImg.width()" << scaleImg.width() << "scaleImg.height()" << scaleImg.height();
 
-            if (!m_isScreenBlank){
+            if (!m_isScreenBlank) {
                 memcpy(m_server->frameBuffer, scaleImg.bits(), scaleImg.width() * scaleImg.height() * scaleImg.depth() / 8);
                 rfbMarkRectAsModified(m_server, 0, 0, scaleImg.width(), scaleImg.height());
             }
 
         } else {
-            if (!m_isScreenBlank){
+            if (!m_isScreenBlank) {
                 memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
                 rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
             }
@@ -501,7 +525,7 @@ void ScreenToVnc::rfbProcessTrigger()
 //    long usec;
 //    usec = m_server->deferUpdateTime*1000;
 
-    if (m_doMouseHandling){
+    if (m_doMouseHandling) {
         // TODO: make the 500ms configurable?!
         qint64 now = QDateTime::currentMSecsSinceEpoch();
         if (!isEmptyMouse && now - lastPointerMove > 500) {
@@ -557,15 +581,16 @@ cursor_info ScreenToVnc::load_cursor_info_from_png(const char* filename)
 
     png.reserve(bpp * width * height);
 
-    for(int y=0; y<height; y++){
-      QRgb *pxRow = (QRgb*) pngImg.scanLine(y);
-      for(int x=0; x<width; x++) {
-          QRgb &px = pxRow[x];
-          png.push_back(qRed(px));
-          png.push_back(qGreen(px));
-          png.push_back(qBlue(px));
-          png.push_back(qAlpha(px));
-      }
+    for (unsigned long y = 0; y < height; y++) {
+        QRgb *pxRow = (QRgb*) pngImg.scanLine(y);
+
+        for (unsigned long x = 0; x < width; x++) {
+            QRgb &px = pxRow[x];
+            png.push_back(qRed(px));
+            png.push_back(qGreen(px));
+            png.push_back(qBlue(px));
+            png.push_back(qAlpha(px));
+        }
     }
 
     info.width = width;
@@ -573,11 +598,11 @@ cursor_info ScreenToVnc::load_cursor_info_from_png(const char* filename)
     info.pixel_data = png;
     info.bitmask = (char*) malloc(sizeof(char) * width * height + 1);
 
-    for(int y=0; y<height; y++){
-        for(int x=0; x<width; x++) {
+    for (long unsigned int y = 0; y < height; y++) {
+        for (long unsigned int x = 0; x < width; x++) {
             int px = y*width*bpp + x*bpp;
             unsigned char alpha = png[px + 3];
-            if(alpha > 1){
+            if (alpha > 1) {
                 //skip pixels with alpha <= 1 instead of alpha = 0
                 //  original png pointer files have a
                 //  few bright white near-transparent pixels with alpha=1
@@ -613,19 +638,19 @@ void ScreenToVnc::mceBlankHandler(QString state)
     LOG() << "state:" << state;
     PRINT("current screen state is: " << state);
 
-    if (state == "off"){
+    if (state == "off") {
         m_isScreenBlank = true;
 
-        for (int j=m_screen_height-1;j>=0;j--){
+        for (int j = m_screen_height - 1; j>=0; j--) {
 
-            for(int i=m_screen_width-1;i>=0;i--)
-                for(int k=2;k>=0;k--)
-                    m_server->frameBuffer[(j*m_screen_width+i)*4+k]=0;
+            for (int i = m_screen_width - 1; i >= 0; i--)
+                for (int k = 2; k >= 0; k--)
+                    m_server->frameBuffer[(j * m_screen_width + i) * 4 + k] = 0;
 
-            for(int i=m_screen_width*4;i<m_screen_width*4;i++)
-                m_server->frameBuffer[j*m_screen->size().width()*4+i]=0;
+            for (int i = m_screen_width * 4; i < m_screen_width * 4; i++)
+                m_server->frameBuffer[j * m_screen->size().width() * 4 + i] = 0;
         }
-        rfbMarkRectAsModified(m_server,0,0,m_screen_width,m_screen_height);
+        rfbMarkRectAsModified(m_server, 0, 0, m_screen_width, m_screen_height);
     } else {
         m_isScreenBlank = false;
     }
@@ -652,7 +677,7 @@ enum displayState ScreenToVnc::getDisplayStatus()
     else {
         status = replyMsg.arguments()[0].toString();
 
-        if(status == "on")
+        if (status == "on")
             return displayOn;
         else
             return displayOff;
@@ -752,9 +777,11 @@ void ScreenToVnc::emitKeystroke(int type, int code, int val)
 
 void ScreenToVnc::keyboardHandler(rfbBool isKeyDown, rfbKeySym keySym, rfbClientPtr cl)
 {
+    Q_UNUSED(cl);
+
     int keyCode = -1;
     int shift = 0;
-    switch(keySym){
+    switch(keySym) {
       case XK_Return:          keyCode=KEY_ENTER;         shift=0;  break;
       case XK_Escape:          keyCode=KEY_ESC;           shift=0;  break;
       case XK_Tab:             keyCode=KEY_TAB;           shift=0;  break;
@@ -878,17 +905,17 @@ void ScreenToVnc::keyboardHandler(rfbBool isKeyDown, rfbKeySym keySym, rfbClient
       case XK_braceright:      keyCode=KEY_RIGHTBRACE;    shift=1;  break;
       case XK_asciitilde:      keyCode=KEY_GRAVE;         shift=1;  break;
     }
-    if(keyCode > 0){
-      if(shift){
-        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 1);
+    if (keyCode > 0) {
+        if (shift) {
+            emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 1);
+            emitKeystroke(EV_SYN, SYN_REPORT, 0);
+        }
+        emitKeystroke(EV_KEY, keyCode, isKeyDown);
         emitKeystroke(EV_SYN, SYN_REPORT, 0);
-      }
-      emitKeystroke(EV_KEY, keyCode, isKeyDown);
-      emitKeystroke(EV_SYN, SYN_REPORT, 0);
-      if(shift){
-        emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 0);
-        emitKeystroke(EV_SYN, SYN_REPORT, 0);
-      }
+        if (shift) {
+            emitKeystroke(EV_KEY, KEY_LEFTSHIFT, 0);
+            emitKeystroke(EV_SYN, SYN_REPORT, 0);
+        }
     }
 }
 
@@ -918,13 +945,11 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
     int realWidth = cl->screen->width;
     int realHeight = cl->screen->height;
 
-    int width;
-    int height;
+    int width = realWidth;
+    int height = realHeight;
 
-    switch (m_orientation){
+    switch (m_orientation) {
     case Portrait:
-        width = realWidth;
-        height = realHeight;
         x = realX;
         y = realY;
         break;
@@ -935,8 +960,6 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         y = realX;
         break;
     case PortraitInverted:
-        width = realWidth;
-        height = realHeight;
         x = realWidth - realX;
         y = realHeight - realY;
         break;
@@ -952,9 +975,9 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
     }
 
     // TODO: smarter way to dedect if in dragMode or not
-    switch (buttonMask){
+    switch (buttonMask) {
     case 0: /*all buttons up */
-        if (cd->dragMode){
+        if (cd->dragMode) {
             struct input_event event_mt_report, event_end, event_mt_tracking_id,
                                event_btn_touch, event_mt_touch_major, event_mt_width_major;
             memset(&event_mt_report, 0, sizeof(event_mt_report));
@@ -972,64 +995,64 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             event_end.code = SYN_REPORT;
             event_end.value = 0;
 
-            if (hasAbsMtTrackingId){
+            if (hasAbsMtTrackingId) {
                 event_mt_tracking_id.type = EV_ABS;
                 event_mt_tracking_id.code = ABS_MT_TRACKING_ID;
                 event_mt_tracking_id.value = 0xffffffff;
             }
 
-            if (hasBntTouch){
+            if (hasBntTouch) {
                 event_btn_touch.type = EV_KEY;
                 event_btn_touch.code = BTN_TOUCH;
                 event_btn_touch.value = 0;
             }
 
-            if (hasAbsMtTouchMajor){
+            if (hasAbsMtTouchMajor) {
                 event_mt_touch_major.type = EV_ABS;
                 event_mt_touch_major.code = ABS_MT_TOUCH_MAJOR;
                 event_mt_touch_major.value = 0;
             }
 
-            if (hasAbsMtWidthMajor){
+            if (hasAbsMtWidthMajor) {
                 event_mt_width_major.type = EV_ABS;
                 event_mt_width_major.code = ABS_MT_WIDTH_MAJOR;
                 event_mt_width_major.value = 0;
             }
 
-            if (hasBntTouch){
-                if(write(eventDev, &event_btn_touch, sizeof(event_btn_touch)) < sizeof(event_btn_touch)) {
+            if (hasBntTouch) {
+                if (write(eventDev, &event_btn_touch, sizeof(event_btn_touch)) < sizeof(event_btn_touch)) {
                     LOG() << "write event_btn_touch failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if (hasAbsMtTouchMajor){
-                if(write(eventDev, &event_mt_touch_major, sizeof(event_mt_touch_major)) < sizeof(event_mt_touch_major)) {
+            if (hasAbsMtTouchMajor) {
+                if (write(eventDev, &event_mt_touch_major, sizeof(event_mt_touch_major)) < sizeof(event_mt_touch_major)) {
                     LOG() << "write event_mt_touch_major failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if (hasAbsMtWidthMajor){
-                if(write(eventDev, &event_mt_width_major, sizeof(event_mt_width_major)) < sizeof(event_mt_width_major)) {
+            if (hasAbsMtWidthMajor) {
+                if (write(eventDev, &event_mt_width_major, sizeof(event_mt_width_major)) < sizeof(event_mt_width_major)) {
                     LOG() << "write event_mt_width_major failed: " << strerror(errno);
                     return;
                 }
             }
 
             if (isTypeA) {
-                if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
+                if (write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
                     LOG() << "write event_mt_report failed: " << strerror(errno);
                     return;
                 }
             } else {
-                if(write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
+                if (write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
                     LOG() << "write event_mt_tracking_id failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
+            if (write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
                 LOG() << "write event_end failed: " << strerror(errno);
                 return;
             }
@@ -1039,7 +1062,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         makeRichCursor(cl->screen);
         break;
     case 1: /* left button down */
-        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
+        if (x >= 0 && y >= 0 && x < width && y < height && now - lastPointerEvent > POINTER_DELAY) {
             struct input_event event_x, event_y, event_pressure, event_mt_report, event_end,
                                event_mt_tracking_id, event_btn_touch, event_mt_touch_major, event_mt_width_major;
             memset(&event_x, 0, sizeof(event_x));
@@ -1062,7 +1085,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             event_y.code = ABS_MT_POSITION_Y;
             event_y.value = qRound(y * mtAbsCorrecturY);
 
-            if (hasAbsMtPressure){
+            if (hasAbsMtPressure) {
                 event_pressure.type = EV_ABS;
                 event_pressure.code = ABS_MT_PRESSURE;
                 event_pressure.value = mtPressureValue;
@@ -1076,7 +1099,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
             event_end.code = SYN_REPORT;
             event_end.value = 0;
 
-            if (hasAbsMtTrackingId){
+            if (hasAbsMtTrackingId) {
                 event_mt_tracking_id.type = EV_ABS;
                 event_mt_tracking_id.code = ABS_MT_TRACKING_ID;
                 if (isTypeA)
@@ -1085,13 +1108,13 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
                     event_mt_tracking_id.value = nextClientId;
             }
 
-            if (hasBntTouch){
+            if (hasBntTouch) {
                 event_btn_touch.type = EV_KEY;
                 event_btn_touch.code = BTN_TOUCH;
                 event_btn_touch.value = 1;
             }
 
-            if (hasAbsMtTouchMajor){
+            if (hasAbsMtTouchMajor) {
                 event_mt_touch_major.type = EV_ABS;
                 event_mt_touch_major.code = ABS_MT_TOUCH_MAJOR;
                 if (isTypeA)
@@ -1100,7 +1123,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
                     event_mt_touch_major.value = 0x6;
             }
 
-            if (hasAbsMtWidthMajor){
+            if (hasAbsMtWidthMajor) {
                 event_mt_width_major.type = EV_ABS;
                 event_mt_width_major.code = ABS_MT_WIDTH_MAJOR;
                 if (isTypeA)
@@ -1109,66 +1132,66 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
                     event_mt_width_major.value = 0x6;
             }
 
-            if(!isTypeA && hasAbsMtTrackingId && !cd->dragMode){
-                if(write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
+            if (!isTypeA && hasAbsMtTrackingId && !cd->dragMode) {
+                if (write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
                     LOG() << "write event_mt_tracking_id failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(hasBntTouch && !cd->dragMode){
-                if(write(eventDev, &event_btn_touch, sizeof(event_btn_touch)) < sizeof(event_btn_touch)) {
+            if (hasBntTouch && !cd->dragMode) {
+                if (write(eventDev, &event_btn_touch, sizeof(event_btn_touch)) < sizeof(event_btn_touch)) {
                     LOG() << "write event_btn_touch failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(write(eventDev, &event_x, sizeof(event_x)) < sizeof(event_x)) {
+            if (write(eventDev, &event_x, sizeof(event_x)) < sizeof(event_x)) {
                 LOG() << "write event_x failed: " << strerror(errno);
                 return;
             }
 
-            if(write(eventDev, &event_y, sizeof(event_y)) < sizeof(event_y)) {
+            if (write(eventDev, &event_y, sizeof(event_y)) < sizeof(event_y)) {
                 LOG() << "write event_y failed: " << strerror(errno);
                 return;
             }
 
-            if (hasAbsMtPressure){
-                if(write(eventDev, &event_pressure, sizeof(event_pressure)) < sizeof(event_pressure)) {
+            if (hasAbsMtPressure) {
+                if (write(eventDev, &event_pressure, sizeof(event_pressure)) < sizeof(event_pressure)) {
                     LOG() << "write event_pressure failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if (hasAbsMtTouchMajor){
-                if(write(eventDev, &event_mt_touch_major, sizeof(event_mt_touch_major)) < sizeof(event_mt_touch_major)) {
+            if (hasAbsMtTouchMajor) {
+                if (write(eventDev, &event_mt_touch_major, sizeof(event_mt_touch_major)) < sizeof(event_mt_touch_major)) {
                     LOG() << "write event_mt_touch_major failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if (hasAbsMtWidthMajor){
-                if(write(eventDev, &event_mt_width_major, sizeof(event_mt_width_major)) < sizeof(event_mt_width_major)) {
+            if (hasAbsMtWidthMajor) {
+                if (write(eventDev, &event_mt_width_major, sizeof(event_mt_width_major)) < sizeof(event_mt_width_major)) {
                     LOG() << "write event_mt_width_major failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(isTypeA && hasAbsMtTrackingId){
-                if(write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
+            if (isTypeA && hasAbsMtTrackingId) {
+                if (write(eventDev, &event_mt_tracking_id, sizeof(event_mt_tracking_id)) < sizeof(event_mt_tracking_id)) {
                     LOG() << "write event_mt_tracking_id failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(isTypeA) {
-                if(write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
+            if (isTypeA) {
+                if (write(eventDev, &event_mt_report, sizeof(event_mt_report)) < sizeof(event_mt_report)) {
                     LOG() << "write event_mt_report failed: " << strerror(errno);
                     return;
                 }
             }
 
-            if(write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
+            if (write(eventDev, &event_end, sizeof(event_end)) < sizeof(event_end)) {
                 LOG() << "write event_end failed: " << strerror(errno);
                 return;
             }
@@ -1181,7 +1204,7 @@ void ScreenToVnc::mouseHandler(int buttonMask, int x, int y, rfbClientPtr cl)
         }
         break;
     case 4: /* right button down */
-        if(x>=0 && y>=0 && x< width && y< height && now - lastPointerEvent > POINTER_DELAY) {
+        if (x >= 0 && y >=0 && x < width && y < height && now - lastPointerEvent > POINTER_DELAY) {
             PRINT("right mouse button clicked");
             mceUnblank();
         }
@@ -1214,7 +1237,7 @@ void ScreenToVnc::clientgone(rfbClientPtr cl)
     rfbScreenInfoPtr screen = cl->screen;
     free(cl->clientData);
 
-    if (screen->clientHead == NULL && exitWhenLastClientGone){
+    if (screen->clientHead == NULL && exitWhenLastClientGone) {
         QCoreApplication::exit(0);
     }
 
@@ -1236,7 +1259,7 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
     }
 
     if (remoteAddr.protocol() == QAbstractSocket::IPv6Protocol
-        && remoteAddr.toString().startsWith("::ffff:")){
+        && remoteAddr.toString().startsWith("::ffff:")) {
         // this is an IPv4-mapped IPv6 address
         // see: http://www.tcpipguide.com/free/t_IPv6IPv4AddressEmbedding-2.htm
         QString remoteAddrIPv4 = remoteAddr.toString().remove("::ffff:");
@@ -1244,14 +1267,14 @@ rfbNewClientAction ScreenToVnc::newclient(rfbClientPtr cl)
         remoteAddr = QHostAddress(remoteAddrIPv4);
     }
 
-    foreach (QNetworkAddressEntry entry, usbIf.addressEntries()){
+    foreach (QNetworkAddressEntry entry, usbIf.addressEntries()) {
         if (remoteAddr.protocol() == entry.ip().protocol()
-            && remoteAddr.isInSubnet(entry.ip(), entry.prefixLength())){
+            && remoteAddr.isInSubnet(entry.ip(), entry.prefixLength())) {
             allowConnection = true;
         }
     }
 
-    if (allowConnection){
+    if (allowConnection) {
         cl->clientData = (void*)calloc(sizeof(ClientData),1);
         ClientData* cd=(ClientData*)cl->clientData;
         cd->dragMode = false;
