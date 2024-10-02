@@ -32,14 +32,11 @@ There is no protection in this VNC server.
 %prep
 %setup -q -n %{name}-%{version}
 
-
 %build
 %qmake5 CONFIG+=release
-make %{?_smp_mflags}
-
+%make_build
 
 %install
-rm -rf %{buildroot}
 %qmake5_install
 
 # systemd integration
@@ -64,11 +61,10 @@ then
 fi
 
 %files
-%defattr(-,root,root,-)
 %attr(2755, root, privileged) %{_bindir}/%{name}
-/usr/share/lipstick2vnc/cursor_empty.png
-/usr/share/lipstick2vnc/cursor_pointer.png
-/usr/share/lipstick2vnc/cursor_pointer_touch.png
+%{_datadir}/lipstick2vnc/cursor_empty.png
+%{_datadir}/lipstick2vnc/cursor_pointer.png
+%{_datadir}/lipstick2vnc/cursor_pointer_touch.png
 %attr(755, root, root) %{_oneshotdir}/20-lipstick2vnc-configurator
 %{_userunitdir}/vnc.socket
 %{_userunitdir}/vnc.service
