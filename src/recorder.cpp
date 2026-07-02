@@ -25,11 +25,12 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QImage>
-#include <qpa/qplatformnativeinterface.h>
 #include <QDebug>
 #include <QThread>
 #include <QMutexLocker>
 #include <QElapsedTimer>
+
+#include <qpa/qplatformnativeinterface.h>
 
 #include "wayland-lipstick-recorder-client-protocol.h"
 #include "recorder.h"
