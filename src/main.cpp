@@ -38,8 +38,7 @@ static bool configureSignalHandlers()
 
     hupSignal.sa_handler = ScreenToVnc::unixHupSignalHandler;
     sigemptyset(&hupSignal.sa_mask);
-    hupSignal.sa_flags = 0;
-    hupSignal.sa_flags |= SA_RESTART;
+    hupSignal.sa_flags = SA_RESTART;
 
     if (sigaction(SIGHUP, &hupSignal, 0) > 0)
         return false;
@@ -50,7 +49,7 @@ static bool configureSignalHandlers()
 
     termSignal.sa_handler = ScreenToVnc::unixTermSignalHandler;
     sigemptyset(&termSignal.sa_mask);
-    termSignal.sa_flags |= SA_RESTART;
+    termSignal.sa_flags = SA_RESTART;
 
     if (sigaction(SIGTERM, &termSignal, 0) > 0)
         return false;
