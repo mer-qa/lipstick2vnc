@@ -109,7 +109,8 @@ void Recorder::start()
 void Recorder::recordFrame()
 {
     IN;
-    Buffer *buf = Q_NULLPTR;
+    Buffer *buf = nullptr;
+
     foreach (Buffer *b, m_buffers) {
         if (!b->busy) {
             buf = b;
