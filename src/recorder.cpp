@@ -192,7 +192,8 @@ void Recorder::global(void *data, wl_registry *registry, uint32_t id, const char
 
     Recorder *rec = static_cast<Recorder *>(data);
     if (strcmp(interface, "lipstick_recorder_manager") == 0) {
-        rec->m_manager = static_cast<lipstick_recorder_manager *>(wl_registry_bind(registry, id, &lipstick_recorder_manager_interface, qMin(version, 1u)));
+        rec->m_manager = static_cast<lipstick_recorder_manager *>(wl_registry_bind(registry, id, &lipstick_recorder_manager_interface,
+                                                                                   qMin(version, 1u)));
     } else if (strcmp(interface, "wl_shm") == 0) {
         rec->m_shm = static_cast<wl_shm *>(wl_registry_bind(registry, id, &wl_shm_interface, qMin(version, 1u)));
     }

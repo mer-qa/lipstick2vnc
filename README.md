@@ -18,12 +18,12 @@ git clone https://github.com/mer-qa/lipstick2vnc.git
 * In the **Build** menu choose **Deploy All**, the created RPM file can now be installed on the device
 
 ## Run on device
-*Systemd* ensures that the VNC server is launched when a client connects to port 5900. So it's logs go into the *systemd journal*. To spare resources the VNC server just runs while clients are connected.
+*Systemd* ensures that the VNC server is launched when a client connects to port 5900. So its logs go into the *systemd journal*. To spare resources the VNC server just runs while clients are connected.
 
-There is no authendication! So connections are just accepted from usb network. So e.g. on Jolla phone you have to enable developer mode and when asked choose "Developer mode", default ip address is then 192.168.2.15 to connect to with the VNC client.
+There is no authentication! So connections are just accepted from usb network. So e.g. on Jolla phone you have to enable developer mode and when asked choose "Developer mode", default ip address is then 192.168.2.15 to connect to with the VNC client.
 
 ## Debug on device
-If you want to run the server in the forground, to follow any output, you need to stop the *systemd* socket listener, see below.
+If you want to run the server in the foreground, to follow any output, you need to stop the *systemd* socket listener, see below.
 
 For all these commands you must be user, not **root**.
 
