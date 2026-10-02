@@ -198,7 +198,7 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     }
 
     m_server->desktopName = "Mer VNC";
-    m_server->frameBuffer=(char*)malloc(m_screen_width * m_screen_height * (m_screen->depth() / 8));
+    m_server->frameBuffer=(char *)malloc(m_screen_height * m_server->paddedWidthInBytes);
 
     m_server->alwaysShared = (1==1);
 
@@ -452,6 +452,17 @@ ScreenToVnc::~ScreenToVnc()
     OUT;
 }
 
+void ScreenToVnc::copyImageToFramebuffer(const QImage &sourceImage)
+{
+    const uchar *bits = sourceImage.bits();
+
+    for (int y = 0; y < sourceImage.height(); y++) {
+        memcpy(m_server->frameBuffer + y * m_server->paddedWidthInBytes,
+               bits + y * sourceImage.bytesPerLine(),
+               sourceImage.bytesPerLine());
+    }
+}
+
 bool ScreenToVnc::event(QEvent *e)
 {
     IN;
@@ -460,7 +471,9 @@ bool ScreenToVnc::event(QEvent *e)
         LOG() << "push frame to vnc buffer";
         FrameEvent *fe = static_cast<FrameEvent *>(e);
         Buffer *buf = fe->buffer;
-        QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED ? buf->image.mirrored(false, true) : buf->image;
+        QImage img = fe->transform == LIPSTICK_RECORDER_TRANSFORM_Y_INVERTED
+                         ? buf->image.mirrored(false, true)
+                         : buf->image;
         buf->busy = false;
 
         switch (m_orientation) {
@@ -494,22 +507,22 @@ bool ScreenToVnc::event(QEvent *e)
 
             LOG() << "start scale image with smooth:" << m_smoothScaling;
             QImage scaleImg = img.scaled(s_x, s_y, Qt::KeepAspectRatio,
-                                         m_smoothScaling
-                                             ? Qt::SmoothTransformation
-                                             : Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888);
+                                         m_smoothScaling ? Qt::SmoothTransformation
+                                                         : Qt::FastTransformation)
+                                  .convertToFormat(QImage::Format_RGBA8888);
             LOG() << "end scale image with smooth:" << m_smoothScaling;
             LOG() << "scaleImg.format:" << scaleImg.format();
 
             LOG() << "scaleImg.width()" << scaleImg.width() << "scaleImg.height()" << scaleImg.height();
 
             if (!m_isScreenBlank) {
-                memcpy(m_server->frameBuffer, scaleImg.bits(), scaleImg.width() * scaleImg.height() * scaleImg.depth() / 8);
+                copyImageToFramebuffer(scaleImg);
                 rfbMarkRectAsModified(m_server, 0, 0, scaleImg.width(), scaleImg.height());
             }
 
         } else {
             if (!m_isScreenBlank) {
-                memcpy(m_server->frameBuffer, img.bits(), img.width() * img.height() * img.depth() / 8);
+                copyImageToFramebuffer(img);
                 rfbMarkRectAsModified(m_server, 0, 0, img.width(), img.height());
             }
         }
@@ -655,8 +668,7 @@ void ScreenToVnc::mceBlankHandler(QString state)
     if (state == "off") {
         m_isScreenBlank = true;
 
-        for (int j = m_screen_height - 1; j>=0; j--) {
-
+        for (int j = m_screen_height - 1; j >= 0; j--) {
             for (int i = m_screen_width - 1; i >= 0; i--)
                 for (int k = 2; k >= 0; k--)
                     m_server->frameBuffer[(j * m_screen_width + i) * 4 + k] = 0;

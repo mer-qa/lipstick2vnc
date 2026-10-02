@@ -150,6 +150,8 @@ private:
     static void clientgone(rfbClientPtr cl);
     static enum rfbNewClientAction newclient(rfbClientPtr cl);
 
+    void copyImageToFramebuffer(const QImage &sourceImage);
+
     enum displayState getDisplayStatus();
 
     bool m_smoothScaling;
