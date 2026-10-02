@@ -242,6 +242,15 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     if (m_server->listenSock < 0) {
         PRINT("Server is not listening on any sockets! Quit");
         m_allFine = false;
+    } else if (!m_server->autoPort && m_server->port == 0) {
+        // Socket handed over by systemd: rfbInitSockets() does FD_ZERO(allFds)
+        // unconditionally and only re-adds sockets it opened itself, so the
+        // listening socket registered above silently drops out of the
+        // select() set and no connection is ever accepted. Re-register it.
+        FD_SET(m_server->listenSock, &(m_server->allFds));
+        if (m_server->maxFd < m_server->listenSock) {
+            m_server->maxFd = m_server->listenSock;
+        }
     }
 
     m_processTimer = new QTimer(this);
