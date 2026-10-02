@@ -158,7 +158,8 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
             SLOT(recorderReady()));
 
     m_screen = QGuiApplication::screens().first();
-    PRINT("Screensize found by QGuiApplication::screens: x: " << m_screen->size().width() << " - y: " << m_screen->size().height());
+    PRINT("Screensize found by QGuiApplication::screens: x: " << m_screen->size().width()
+                                                              << " - y: " << m_screen->size().height());
 
     int screenWidth = qRound(m_screen->size().width() * m_scalingFactor);
     int screenHeight = qRound(m_screen->size().height() * m_scalingFactor);
@@ -492,7 +493,10 @@ bool ScreenToVnc::event(QEvent *e)
             LOG() << "img.format:" << img.format();
 
             LOG() << "start scale image with smooth:" << m_smoothScaling;
-            QImage scaleImg = img.scaled(s_x, s_y, Qt::KeepAspectRatio, m_smoothScaling ? Qt::SmoothTransformation : Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888);
+            QImage scaleImg = img.scaled(s_x, s_y, Qt::KeepAspectRatio,
+                                         m_smoothScaling
+                                             ? Qt::SmoothTransformation
+                                             : Qt::FastTransformation).convertToFormat(QImage::Format_RGBA8888);
             LOG() << "end scale image with smooth:" << m_smoothScaling;
             LOG() << "scaleImg.format:" << scaleImg.format();
 

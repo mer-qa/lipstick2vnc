@@ -90,7 +90,8 @@ int main(int argc, char *argv[])
     QCommandLineOption buffersOption(QStringList() << "b" << "buffers", "how many buffers to create", "buffers");
     parser.addOption(buffersOption);
 
-    QCommandLineOption intervalOption(QStringList() << "p" << "processTimerInterval", "In which interval shall the process timer trigger", "processTimerInterval");
+    QCommandLineOption intervalOption(QStringList() << "p" << "processTimerInterval",
+                                      "In which interval shall the process timer trigger", "processTimerInterval");
     parser.addOption(intervalOption);
 
     QCommandLineOption mouseOption(QStringList() << "M" << "no-mouse-handler", "don't handle mouse events from vnc clients");
@@ -145,7 +146,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    ScreenToVnc screen2vnc(NULL, smoothScaling, scaleFactor, orientation, usec, buffers, processTimerInterval, doMouseHandler, doKeyboardHandler);
+    ScreenToVnc screen2vnc(nullptr, smoothScaling, scaleFactor, orientation, usec, buffers,
+                           processTimerInterval, doMouseHandler, doKeyboardHandler);
     if(!screen2vnc.m_allFine){
         LOG() << "something failed to initialize!";
         return 1;
