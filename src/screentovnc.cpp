@@ -215,15 +215,16 @@ ScreenToVnc::ScreenToVnc(QObject *parent, bool smoothScaling, float scalingFacto
     // check if launched by systemd with a ready socket (LISTEN_FDS env var)
     int sd_fds = sd_listen_fds(1);
     if (sd_fds) {
-        for (int i = SD_LISTEN_FDS_START; i < (SD_LISTEN_FDS_START + sd_fds); i++) {
-            if (sd_is_socket(i, AF_INET6, SOCK_STREAM, 1)
-                || sd_is_socket(i, AF_INET, SOCK_STREAM, 1)) {
-                LOG() << "using given socket at FD:" << i;
+        for (int sd_fd = SD_LISTEN_FDS_START; sd_fd < (SD_LISTEN_FDS_START + sd_fds); sd_fd++) {
+            if (sd_is_socket(sd_fd, AF_INET6, SOCK_STREAM, 1)
+                || sd_is_socket(sd_fd, AF_INET, SOCK_STREAM, 1)) {
+                LOG() << "using given socket at FD:" << sd_fd;
                 m_server->autoPort = false;
                 m_server->port = 0;
                 m_server->ipv6port = 0;
                 m_server->udpPort = 0;
-                m_server->listenSock = i;
+                // suspicious: this can happen multiple times
+                m_server->listenSock = sd_fd;
                 FD_SET(m_server->listenSock, &(m_server->allFds));
                 m_server->maxFd = m_server->listenSock;
                 exitWhenLastClientGone = true;
