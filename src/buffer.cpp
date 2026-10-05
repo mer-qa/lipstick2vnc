@@ -36,7 +36,7 @@ Buffer *Buffer::create(wl_shm *shm, QScreen *screen)
     int fd = mkstemp(filename);
     if (fd < 0) {
         qWarning("creating a buffer file for %d B failed: %m\n", size);
-        return Q_NULLPTR;
+        return nullptr;
     }
     int flags = fcntl(fd, F_GETFD);
     if (flags != -1)
@@ -45,7 +45,7 @@ Buffer *Buffer::create(wl_shm *shm, QScreen *screen)
     if (ftruncate(fd, size) < 0) {
         qWarning("ftruncate failed: %s", strerror(errno));
         close(fd);
-        return Q_NULLPTR;
+        return nullptr;
     }
 
     uchar *data = (uchar *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -53,7 +53,7 @@ Buffer *Buffer::create(wl_shm *shm, QScreen *screen)
     if (data == (uchar *)MAP_FAILED) {
         qWarning("mmap failed: %m\n");
         close(fd);
-        return Q_NULLPTR;
+        return nullptr;
     }
 
     Buffer *buf = new Buffer;
